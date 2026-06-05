@@ -648,7 +648,7 @@
    KONFIGURATION
    ============================================================ */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5TzZo1zNBSJBaNtiLUeiv2k19Q2Y9dpXetEyWu0nzSRCo9pzDt7zZ77RxCyr0RSXU/exec';
-const VERSION = 'v2.1';
+const VERSION = 'v2.2';
 
 /* ============================================================
    KONSTANTEN
@@ -891,11 +891,42 @@ function activateDrag(gKey, dIdx, tIdx) {
 
 function startDrag(e, gKey, dIdx, tIdx) {
   e.preventDefault();
-  if (e.pointerType === 'mouse') {
-    activateDrag(gKey, dIdx, tIdx);
-  } else {
+
+  /* Touch: einfacher Tap schaltet eine Zelle um */
+  if (e.pointerType !== 'mouse') {
     singleToggle(gKey, dIdx, tIdx);
+    return;
   }
+
+  /* Maus: Klick = toggle | Gedrückt + Bewegen = Mehrfachauswahl */
+  var x0 = e.clientX, y0 = e.clientY, moved = false;
+
+  function onMove(ev) {
+    if (!moved && (Math.abs(ev.clientX - x0) > 4 || Math.abs(ev.clientY - y0) > 4)) {
+      moved = true;
+      var grid = gKey === 'lr' ? lrGrid : trGrid;
+      var cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
+      var isOn = (grid.times[DAYS[dIdx]] || []).includes(TIMES[tIdx]);
+      grid.drag = { active:true, mode: isOn ? 'deselect' : 'select',
+        startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
+      activeGrid = { grid, key:gKey, cId };
+      document.body.classList.add('is-dragging');
+    }
+    if (moved) moveDrag(ev);
+  }
+
+  function onUp() {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup',   onUp);
+    if (moved) {
+      endDrag();
+    } else {
+      singleToggle(gKey, dIdx, tIdx);
+    }
+  }
+
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup',   onUp);
 }
 
 function moveDrag(e) {
