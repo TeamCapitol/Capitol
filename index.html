@@ -648,7 +648,7 @@
    KONFIGURATION
    ============================================================ */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5TzZo1zNBSJBaNtiLUeiv2k19Q2Y9dpXetEyWu0nzSRCo9pzDt7zZ77RxCyr0RSXU/exec';
-const VERSION = 'v2.2';
+const VERSION = 'v2.3';
 
 /* ============================================================
    KONSTANTEN
@@ -890,17 +890,30 @@ function activateDrag(gKey, dIdx, tIdx) {
 }
 
 function startDrag(e, gKey, dIdx, tIdx) {
-  e.preventDefault();
 
-  /* Touch: einfacher Tap schaltet eine Zelle um */
+  /* ── Touch: Toggle erst beim sauberen Tap (down→up ohne Bewegung) ── */
   if (e.pointerType !== 'mouse') {
-    singleToggle(gKey, dIdx, tIdx);
+    var x0 = e.clientX, y0 = e.clientY;
+    function cleanupTouch() {
+      document.removeEventListener('pointermove',   onTMove);
+      document.removeEventListener('pointerup',     onTUp);
+      document.removeEventListener('pointercancel', onTCancel);
+    }
+    function onTMove(ev) {
+      if (Math.abs(ev.clientX - x0) > 8 || Math.abs(ev.clientY - y0) > 8)
+        cleanupTouch(); // Finger hat sich bewegt → Scroll, kein Toggle
+    }
+    function onTUp()     { cleanupTouch(); singleToggle(gKey, dIdx, tIdx); }
+    function onTCancel() { cleanupTouch(); } // Browser scrollt
+    document.addEventListener('pointermove',   onTMove, { passive: true });
+    document.addEventListener('pointerup',     onTUp);
+    document.addEventListener('pointercancel', onTCancel);
     return;
   }
 
-  /* Maus: Klick = toggle | Gedrückt + Bewegen = Mehrfachauswahl */
+  /* ── Maus: Klick = toggle | Gedrückt + Bewegen = Mehrfachauswahl ── */
+  e.preventDefault();
   var x0 = e.clientX, y0 = e.clientY, moved = false;
-
   function onMove(ev) {
     if (!moved && (Math.abs(ev.clientX - x0) > 4 || Math.abs(ev.clientY - y0) > 4)) {
       moved = true;
@@ -914,17 +927,11 @@ function startDrag(e, gKey, dIdx, tIdx) {
     }
     if (moved) moveDrag(ev);
   }
-
   function onUp() {
     document.removeEventListener('pointermove', onMove);
     document.removeEventListener('pointerup',   onUp);
-    if (moved) {
-      endDrag();
-    } else {
-      singleToggle(gKey, dIdx, tIdx);
-    }
+    if (moved) endDrag(); else singleToggle(gKey, dIdx, tIdx);
   }
-
   document.addEventListener('pointermove', onMove);
   document.addEventListener('pointerup',   onUp);
 }
