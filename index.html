@@ -286,6 +286,7 @@
       transition: background .1s, border-color .1s, color .1s, box-shadow .1s;
       user-select: none; -webkit-user-select: none;
       touch-action: manipulation;
+      -webkit-touch-callout: none;
     }
     .time-btn:hover { border-color: var(--border-2); color: var(--text-dim); }
     .time-btn.active {
@@ -702,6 +703,13 @@ window.addEventListener('load', () => {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('sheet-url-input')
     ?.addEventListener('keydown', e => { if (e.key === 'Enter') handleLoginSubmit(); });
+
+  // Kontext-Menü auf Zeitbuttons verhindern (stört Hold-to-Drag auf Android)
+  document.addEventListener('contextmenu', e => {
+    if (e.target.closest('[data-d]') || holdPending || activeGrid?.grid.drag.active) {
+      e.preventDefault();
+    }
+  });
 });
 
 /* ============================================================
@@ -902,24 +910,31 @@ function onHoldCancel() { clearHold(); }
 
 function startDrag(e, gKey, dIdx, tIdx) {
   if (e.pointerType === 'mouse') {
-    // Maus: sofort aktivieren
     e.preventDefault();
     activateDrag(gKey, dIdx, tIdx);
     return;
   }
   // Touch: erst nach HOLD_MS aktivieren
-  holdPending = { gKey, dIdx, tIdx, x: e.clientX, y: e.clientY };
-  holdTimer   = setTimeout(() => {
+  holdPending = {
+    gKey, dIdx, tIdx,
+    x: e.clientX, y: e.clientY,
+    target: e.target,           // für setPointerCapture
+    pointerId: e.pointerId,     // für setPointerCapture
+  };
+  holdTimer = setTimeout(() => {
     if (!holdPending) return;
-    const { gKey, dIdx, tIdx } = holdPending;
+    const { gKey, dIdx, tIdx, target, pointerId } = holdPending;
     holdPending = null;
-    if (navigator.vibrate) navigator.vibrate(20); // kurzes Haptic-Feedback
+    if (navigator.vibrate) navigator.vibrate(20);
+    // setPointerCapture verhindert, dass der Browser pointercancel
+    // (Long-Press-Kontextmenü) sendet und den Drag abbricht
+    try { target.setPointerCapture(pointerId); } catch(_) {}
     clearHold();
     activateDrag(gKey, dIdx, tIdx);
   }, HOLD_MS);
   window.addEventListener('pointermove', onHoldMove, { passive: true });
-  window.addEventListener('pointerup',   onHoldUp,   { once: true });
-  window.addEventListener('pointercancel', onHoldCancel, { once: true });
+  window.addEventListener('pointerup',   onHoldUp);
+  window.addEventListener('pointercancel', onHoldCancel);
 }
 
 function moveDrag(e) {
