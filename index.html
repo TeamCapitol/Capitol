@@ -255,29 +255,37 @@
 
     /* ── TERMIN ────────────────────────────────────────────── */
     .day-row {
-      display: flex; align-items: flex-start;
+      display: flex; align-items: center;
       gap: 10px; padding: 11px 16px;
       border-bottom: 1px solid var(--border);
     }
     .day-row:last-child { border-bottom: none; }
 
     .day-label {
-      flex-shrink: 0; width: 28px; padding-top: 8px;
+      flex-shrink: 0; width: 28px;
       font-size: 11px; font-weight: 700;
       letter-spacing: .08em; text-transform: uppercase;
       color: var(--text-dim); text-align: center; line-height: 1;
     }
-    .time-slots { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; }
+    /* Grid mit 6 fixen Spalten – 22:50 bleibt immer in der Reihe */
+    .time-slots {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+      flex: 1;
+      min-width: 0;
+    }
 
     .time-btn {
-      padding: 0 10px; height: 36px; min-width: 58px;
+      width: 100%; min-width: 0;
+      height: 36px;
       background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-sm);
       font-family: 'Space Mono', monospace;
       font-size: 12px; color: var(--text-muted);
       cursor: crosshair;
       transition: background .1s, border-color .1s, color .1s, box-shadow .1s;
       user-select: none; -webkit-user-select: none;
-      touch-action: manipulation; /* Scroll erlaubt, Double-tap-Zoom verhindert */
+      touch-action: manipulation;
     }
     .time-btn:hover { border-color: var(--border-2); color: var(--text-dim); }
     .time-btn.active {
@@ -487,24 +495,21 @@
       .auth-card { padding: 34px 20px 24px; }
       .auth-title { font-size: 30px; }
       .app-main { padding: 14px 10px 40px; gap: 14px; }
-      .day-row { padding: 10px 12px; gap: 8px; }
-      .time-btn { font-size: 11px; min-width: 54px; }
+      .day-row { padding: 10px 12px; gap: 6px; }
+      .day-label { width: 24px; font-size: 10px; }
+      /* Grid übernimmt Größenanpassung – kein min-width nötig */
+      .time-btn { font-size: 10px; height: 34px; }
+      .time-slots { gap: 4px; }
       .buff-grid { grid-template-columns: repeat(2, 1fr); padding: 10px; gap: 8px; }
       .buff-btn { padding: 12px 10px; gap: 8px; }
       .buff-name { font-size: 13px; }
       .buff-icon { font-size: 18px; }
     }
-    @media (max-width: 420px) {
-      .time-btn { min-width: 50px; font-size: 11px; padding: 0 6px; }
-    }
-    @media (max-width: 380px) {
-      .time-btn { min-width: 46px; font-size: 10px; padding: 0 5px; height: 34px; }
-      .time-slots { gap: 4px; }
-      .day-label { width: 24px; font-size: 10px; }
-    }
-    @media (max-width: 340px) {
-      .time-btn { min-width: 40px; font-size: 9px; padding: 0 3px; }
+    @media (max-width: 360px) {
+      .time-btn { font-size: 9px; height: 32px; }
       .time-slots { gap: 3px; }
+      .day-label { width: 20px; font-size: 9px; }
+      .day-row { padding: 8px 10px; gap: 5px; }
     }
   </style>
 </head>
@@ -879,15 +884,19 @@ function clearHold() {
 
 function onHoldMove(e) {
   if (!holdPending) return;
-  if (Math.abs(e.clientX - holdPending.x) > 8 || Math.abs(e.clientY - holdPending.y) > 8) {
-    clearHold(); // User scrollt → kein Drag
+  if (Math.abs(e.clientX - holdPending.x) > 10 || Math.abs(e.clientY - holdPending.y) > 10) {
+    clearHold(); // Finger bewegt sich → Scroll, kein Drag
   }
 }
-function onHoldUp() {
+function onHoldUp(e) {
   if (!holdPending) return;
+  // Gesamtverschiebung prüfen: Android feuert manchmal pointerup nach Scroll
+  const dx = Math.abs(e.clientX - holdPending.x);
+  const dy = Math.abs(e.clientY - holdPending.y);
   const { gKey, dIdx, tIdx } = holdPending;
   clearHold();
-  singleToggle(gKey, dIdx, tIdx); // kurzer Tap
+  if (dx > 10 || dy > 10) return; // War ein Scroll – nichts tun
+  singleToggle(gKey, dIdx, tIdx);
 }
 function onHoldCancel() { clearHold(); }
 
