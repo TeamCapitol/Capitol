@@ -228,6 +228,10 @@
     }
     .header-logo { font-size: 20px; font-weight: 700; letter-spacing: .05em; }
     .header-logo span { color: var(--accent); }
+    .header-version {
+      font-size: 10px; font-weight: 600; color: var(--text-muted);
+      letter-spacing: .06em; margin-top: 1px;
+    }
 
     .app-main {
       padding: 20px 16px 48px;
@@ -562,6 +566,7 @@
   <header class="app-header">
     <div>
       <div class="header-logo"><span>Capitol</span></div>
+      <div id="header-version" class="header-version"></div>
     </div>
     <button class="btn-logout" onclick="logout()">Abmelden</button>
   </header>
@@ -642,6 +647,7 @@
    KONFIGURATION
    ============================================================ */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5TzZo1zNBSJBaNtiLUeiv2k19Q2Y9dpXetEyWu0nzSRCo9pzDt7zZ77RxCyr0RSXU/exec';
+const VERSION = 'v1.6';
 
 /* ============================================================
    KONSTANTEN
@@ -757,6 +763,7 @@ async function loadAndEnter() {
   try {
     await loadUserData();
     localStorage.setItem(LS_KEY, sheetUrl);
+    document.getElementById('header-version').textContent = VERSION;
     showView('view-app');
   } catch (err) {
     const back = localStorage.getItem(LS_KEY) ? 'view-resume' : 'view-login';
@@ -876,7 +883,9 @@ function activateDrag(gKey, dIdx, tIdx) {
     startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
   activeGrid = { grid, key:gKey, cId };
   document.body.classList.add('is-dragging');
-  renderTimeGrid(grid, cId, gKey);
+  // KEIN renderTimeGrid hier: würde den captured Button aus dem DOM
+  // entfernen → Browser feuert sofort pointercancel → Drag bricht ab.
+  // Erster Re-Render passiert beim ersten moveDrag (Finger bewegt sich).
   document.addEventListener('pointermove', moveDrag, { passive: false });
   document.addEventListener('pointerup',   endDrag);
   document.addEventListener('pointercancel', endDrag);
@@ -945,8 +954,11 @@ function moveDrag(e) {
   const d = parseInt(btn.dataset.d), t = parseInt(btn.dataset.t);
   if (isNaN(d)||isNaN(t)) return;
   const dr = activeGrid.grid.drag;
-  if (d===dr.curDay && t===dr.curTime) return;
-  dr.curDay=d; dr.curTime=t;
+  // Immer rendern beim ersten Aufruf (dr.rendered noch nicht gesetzt),
+  // danach nur wenn sich die Position ändert
+  const changed = d !== dr.curDay || t !== dr.curTime;
+  if (!changed && dr.rendered) return;
+  dr.curDay = d; dr.curTime = t; dr.rendered = true;
   renderTimeGrid(activeGrid.grid, activeGrid.cId, activeGrid.key);
 }
 
