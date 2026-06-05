@@ -647,7 +647,7 @@
    KONFIGURATION
    ============================================================ */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5TzZo1zNBSJBaNtiLUeiv2k19Q2Y9dpXetEyWu0nzSRCo9pzDt7zZ77RxCyr0RSXU/exec';
-const VERSION = 'v1.6';
+const VERSION = 'v1.7';
 
 /* ============================================================
    KONSTANTEN
@@ -875,6 +875,9 @@ function singleToggle(gKey, dIdx, tIdx) {
 }
 
 /* Drag aktivieren (nach Hold oder sofort bei Maus) */
+/* touchmove-Handler: verhindert Scroll + Browser-Long-Press-Cancel während Drag */
+function preventScrollDuringDrag(e) { e.preventDefault(); }
+
 function activateDrag(gKey, dIdx, tIdx) {
   const grid = gKey === 'lr' ? lrGrid : trGrid;
   const cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
@@ -883,39 +886,13 @@ function activateDrag(gKey, dIdx, tIdx) {
     startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
   activeGrid = { grid, key:gKey, cId };
   document.body.classList.add('is-dragging');
-  // KEIN renderTimeGrid hier: würde den captured Button aus dem DOM
-  // entfernen → Browser feuert sofort pointercancel → Drag bricht ab.
-  // Erster Re-Render passiert beim ersten moveDrag (Finger bewegt sich).
+  // touchmove preventDefault: blockiert Scroll UND verhindert dass der Browser
+  // nach ~500ms einen pointercancel (Long-Press) schickt. Muss non-passive sein.
+  document.addEventListener('touchmove',   preventScrollDuringDrag, { passive: false });
   document.addEventListener('pointermove', moveDrag, { passive: false });
   document.addEventListener('pointerup',   endDrag);
   document.addEventListener('pointercancel', endDrag);
 }
-
-/* Hold-Listener aufräumen */
-function clearHold() {
-  clearTimeout(holdTimer); holdTimer = null; holdPending = null;
-  window.removeEventListener('pointermove', onHoldMove);
-  window.removeEventListener('pointerup',   onHoldUp);
-  window.removeEventListener('pointercancel', onHoldCancel);
-}
-
-function onHoldMove(e) {
-  if (!holdPending) return;
-  if (Math.abs(e.clientX - holdPending.x) > 10 || Math.abs(e.clientY - holdPending.y) > 10) {
-    clearHold(); // Finger bewegt sich → Scroll, kein Drag
-  }
-}
-function onHoldUp(e) {
-  if (!holdPending) return;
-  // Gesamtverschiebung prüfen: Android feuert manchmal pointerup nach Scroll
-  const dx = Math.abs(e.clientX - holdPending.x);
-  const dy = Math.abs(e.clientY - holdPending.y);
-  const { gKey, dIdx, tIdx } = holdPending;
-  clearHold();
-  if (dx > 10 || dy > 10) return; // War ein Scroll – nichts tun
-  singleToggle(gKey, dIdx, tIdx);
-}
-function onHoldCancel() { clearHold(); }
 
 function startDrag(e, gKey, dIdx, tIdx) {
   if (e.pointerType === 'mouse') {
@@ -924,20 +901,12 @@ function startDrag(e, gKey, dIdx, tIdx) {
     return;
   }
   // Touch: erst nach HOLD_MS aktivieren
-  holdPending = {
-    gKey, dIdx, tIdx,
-    x: e.clientX, y: e.clientY,
-    target: e.target,           // für setPointerCapture
-    pointerId: e.pointerId,     // für setPointerCapture
-  };
+  holdPending = { gKey, dIdx, tIdx, x: e.clientX, y: e.clientY };
   holdTimer = setTimeout(() => {
     if (!holdPending) return;
-    const { gKey, dIdx, tIdx, target, pointerId } = holdPending;
+    const { gKey, dIdx, tIdx } = holdPending;
     holdPending = null;
     if (navigator.vibrate) navigator.vibrate(20);
-    // setPointerCapture verhindert, dass der Browser pointercancel
-    // (Long-Press-Kontextmenü) sendet und den Drag abbricht
-    try { target.setPointerCapture(pointerId); } catch(_) {}
     clearHold();
     activateDrag(gKey, dIdx, tIdx);
   }, HOLD_MS);
@@ -954,13 +923,12 @@ function moveDrag(e) {
   const d = parseInt(btn.dataset.d), t = parseInt(btn.dataset.t);
   if (isNaN(d)||isNaN(t)) return;
   const dr = activeGrid.grid.drag;
-  // Immer rendern beim ersten Aufruf (dr.rendered noch nicht gesetzt),
-  // danach nur wenn sich die Position ändert
   const changed = d !== dr.curDay || t !== dr.curTime;
   if (!changed && dr.rendered) return;
   dr.curDay = d; dr.curTime = t; dr.rendered = true;
   renderTimeGrid(activeGrid.grid, activeGrid.cId, activeGrid.key);
 }
+
 
 let lrSaveTimer=null, trTimesSaveTimer=null;
 
@@ -981,6 +949,7 @@ function endDrag() {
   }
   activeGrid = null;
   renderTimeGrid(grid, cId, key);
+  document.removeEventListener('touchmove',   preventScrollDuringDrag);
   document.removeEventListener('pointermove', moveDrag);
   document.removeEventListener('pointerup',   endDrag);
   document.removeEventListener('pointercancel', endDrag);
