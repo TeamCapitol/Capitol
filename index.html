@@ -291,6 +291,7 @@
       user-select: none; -webkit-user-select: none;
       touch-action: manipulation;
       -webkit-touch-callout: none;
+      -webkit-touch-callout: none;
     }
     .time-btn:hover { border-color: var(--border-2); color: var(--text-dim); }
     .time-btn.active {
@@ -647,7 +648,7 @@
    KONFIGURATION
    ============================================================ */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5TzZo1zNBSJBaNtiLUeiv2k19Q2Y9dpXetEyWu0nzSRCo9pzDt7zZ77RxCyr0RSXU/exec';
-const VERSION = 'v2.0';
+const VERSION = 'v2.1';
 
 /* ============================================================
    KONSTANTEN
@@ -860,52 +861,15 @@ function renderTermin() { renderTimeGrid(lrGrid, 'termin-grid', 'lr'); }
 
 
 /* ── Drag-System ─────────────────────────────────────────────────
-   touch-action:manipulation → Scroll möglich beim schnellen Wischen.
-   Drag startet erst nach HOLD_MS Halten ohne Bewegung.
-   - Schnelles Wischen      → Scroll (Browser übernimmt)
-   - Hold <300ms loslassen  → einzelne Zelle toggle
-   - Hold >=300ms + Ziehen  → Mehrfachauswahl
+   Maus  → Drag zum Mehrfachauswählen
+   Touch → Einzelner Tap schaltet eine Zelle um (kein Drag)
    ───────────────────────────────────────────────────────────────── */
-const HOLD_MS = 300;
-let holdTimer   = null;
-let holdPending = null;
-
-function preventScrollFn(e) { e.preventDefault(); }
-
-function clearHoldListeners() {
-  window.removeEventListener('pointermove',     onHoldMove);
-  document.removeEventListener('pointerup',     onHoldUp);
-  document.removeEventListener('pointercancel', onHoldCancel);
-}
-
-function onHoldMove(e) {
-  if (!holdPending) return;
-  if (Math.abs(e.clientX - holdPending.x) > 10 || Math.abs(e.clientY - holdPending.y) > 10) {
-    clearTimeout(holdTimer); holdTimer = null;
-    holdPending = null;
-    clearHoldListeners();
-  }
-}
-
-function onHoldUp() {
-  if (!holdPending) return;
-  clearTimeout(holdTimer); holdTimer = null;
-  const p = holdPending; holdPending = null;
-  clearHoldListeners();
-  singleToggle(p.gKey, p.dIdx, p.tIdx);
-}
-
-function onHoldCancel() {
-  clearTimeout(holdTimer); holdTimer = null;
-  holdPending = null;
-  clearHoldListeners();
-}
 
 function singleToggle(gKey, dIdx, tIdx) {
-  const grid = gKey === 'lr' ? lrGrid : trGrid;
-  const cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
-  const arr  = grid.times[DAYS[dIdx]] ??= [];
-  const idx  = arr.indexOf(TIMES[tIdx]);
+  var grid = gKey === 'lr' ? lrGrid : trGrid;
+  var cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
+  var arr  = grid.times[DAYS[dIdx]] || (grid.times[DAYS[dIdx]] = []);
+  var idx  = arr.indexOf(TIMES[tIdx]);
   if (idx === -1) arr.push(TIMES[tIdx]); else arr.splice(idx, 1);
   renderTimeGrid(grid, cId, gKey);
   if (gKey === 'lr') { clearTimeout(lrSaveTimer);      lrSaveTimer      = setTimeout(saveLRTermin, 300); }
@@ -913,36 +877,25 @@ function singleToggle(gKey, dIdx, tIdx) {
 }
 
 function activateDrag(gKey, dIdx, tIdx) {
-  const grid = gKey === 'lr' ? lrGrid : trGrid;
-  const cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
-  const isOn = (grid.times[DAYS[dIdx]] ?? []).includes(TIMES[tIdx]);
+  var grid = gKey === 'lr' ? lrGrid : trGrid;
+  var cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
+  var isOn = (grid.times[DAYS[dIdx]] || []).includes(TIMES[tIdx]);
   grid.drag  = { active:true, mode: isOn ? 'deselect' : 'select',
     startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
   activeGrid = { grid, key:gKey, cId };
   document.body.classList.add('is-dragging');
-  document.addEventListener('touchmove',    preventScrollFn, { passive: false });
   document.addEventListener('pointermove',  moveDrag);
   document.addEventListener('pointerup',    endDrag);
   document.addEventListener('pointercancel', endDrag);
 }
 
 function startDrag(e, gKey, dIdx, tIdx) {
+  e.preventDefault();
   if (e.pointerType === 'mouse') {
-    e.preventDefault();
     activateDrag(gKey, dIdx, tIdx);
-    return;
+  } else {
+    singleToggle(gKey, dIdx, tIdx);
   }
-  holdPending = { gKey, dIdx, tIdx, x: e.clientX, y: e.clientY };
-  window.addEventListener('pointermove',    onHoldMove, { passive: true });
-  document.addEventListener('pointerup',    onHoldUp);
-  document.addEventListener('pointercancel', onHoldCancel);
-  holdTimer = setTimeout(function() {
-    if (!holdPending) return;
-    var p = holdPending; holdPending = null;
-    clearHoldListeners();
-    if (navigator.vibrate) navigator.vibrate(20);
-    activateDrag(p.gKey, p.dIdx, p.tIdx);
-  }, HOLD_MS);
 }
 
 function moveDrag(e) {
@@ -959,7 +912,6 @@ function moveDrag(e) {
 }
 
 function endDrag() {
-  document.removeEventListener('touchmove',    preventScrollFn);
   document.removeEventListener('pointermove',  moveDrag);
   document.removeEventListener('pointerup',    endDrag);
   document.removeEventListener('pointercancel', endDrag);
@@ -973,9 +925,9 @@ function endDrag() {
     if (!grid.times[day]) grid.times[day] = [];
     var arr = grid.times[day];
     for (var t = r.minT; t <= r.maxT; t++) {
-      var time = TIMES[t], idx = arr.indexOf(time);
-      if (grid.drag.mode === 'select'   && idx === -1) arr.push(time);
-      if (grid.drag.mode === 'deselect' && idx !== -1) arr.splice(idx, 1);
+      var time = TIMES[t], idx2 = arr.indexOf(time);
+      if (grid.drag.mode === 'select'   && idx2 === -1) arr.push(time);
+      if (grid.drag.mode === 'deselect' && idx2 !== -1) arr.splice(idx2, 1);
     }
   }
   activeGrid = null;
