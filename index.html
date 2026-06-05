@@ -277,7 +277,7 @@
       cursor: crosshair;
       transition: background .1s, border-color .1s, color .1s, box-shadow .1s;
       user-select: none; -webkit-user-select: none;
-      touch-action: none;
+      touch-action: manipulation; /* Scroll erlaubt, Double-tap-Zoom verhindert */
     }
     .time-btn:hover { border-color: var(--border-2); color: var(--text-dim); }
     .time-btn.active {
@@ -394,6 +394,77 @@
       box-shadow: 0 2px 12px rgba(140,75,21,.6);
     }
 
+
+    /* ── TIME RUNS ─────────────────────────────────────────── */
+    .tr-divider {
+      display: flex; align-items: center; gap: 14px;
+      padding: 6px 0; color: var(--text-muted);
+      font-size: 11px; font-weight: 700; letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .tr-divider::before, .tr-divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
+
+    /* Klassen-Auswahl Wrapper */
+    .class-groups {
+      padding: 14px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .class-group-label {
+      font-size: 11px; font-weight: 700; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    .class-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+    }
+
+    .class-btn {
+      position: relative;
+      display: flex; align-items: center; gap: 9px;
+      padding: 11px 12px;
+      background: var(--bg); border: 1px solid var(--border); border-radius: var(--r);
+      cursor: pointer; text-align: left; width: 100%;
+      transition: all .15s; user-select: none; -webkit-user-select: none;
+    }
+    .class-btn:hover:not([disabled]) { border-color: var(--border-2); background: var(--surface-2); }
+    .class-btn:active:not([disabled]) { transform: scale(.96); }
+    .class-btn[disabled] { opacity: .28; cursor: not-allowed; }
+
+    /* Hauptklasse – blau */
+    .class-btn.prio {
+      background: var(--accent-dim); border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    /* Füllklasse – gedämpftes Blau */
+    .class-btn.fill {
+      background: rgba(77,158,255,.07); border-color: rgba(77,158,255,.4);
+    }
+    /* Schon in der anderen Gruppe */
+    .class-btn.taken { opacity: .3; cursor: not-allowed; pointer-events: none; }
+
+    .class-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
+    .class-name { font-size: 13px; font-weight: 600; color: var(--text); }
+
+    /* Prio-Badge (1 / 2) */
+    .class-prio-badge {
+      position: absolute; top: -6px; right: -6px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); color: #000;
+      font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--surface);
+    }
+
+    @media (max-width: 480px) {
+      .class-grid { grid-template-columns: repeat(2, 1fr); }
+      .class-btn { padding: 10px 10px; gap: 7px; }
+      .class-name { font-size: 12px; }
+    }
+
     /* ── TOAST ─────────────────────────────────────────────── */
     .toast {
       position: fixed; bottom: 28px; left: 50%;
@@ -423,9 +494,17 @@
       .buff-name { font-size: 13px; }
       .buff-icon { font-size: 18px; }
     }
-    @media (max-width: 360px) {
-      .time-btn { font-size: 10px; min-width: 48px; padding: 0 7px; }
+    @media (max-width: 420px) {
+      .time-btn { min-width: 50px; font-size: 11px; padding: 0 6px; }
+    }
+    @media (max-width: 380px) {
+      .time-btn { min-width: 46px; font-size: 10px; padding: 0 5px; height: 34px; }
       .time-slots { gap: 4px; }
+      .day-label { width: 24px; font-size: 10px; }
+    }
+    @media (max-width: 340px) {
+      .time-btn { min-width: 40px; font-size: 9px; padding: 0 3px; }
+      .time-slots { gap: 3px; }
     }
   </style>
 </head>
@@ -485,7 +564,7 @@
 
     <section class="section">
       <div class="section-head">
-        <h2 class="section-title">🗓&nbsp; Termine</h2>
+        <h2 class="section-title">🗓&nbsp; LR Termine</h2>
         <span class="section-badge">Mehrfachauswahl</span>
       </div>
       <div id="termin-grid"></div>
@@ -506,6 +585,44 @@
       </div>
       <div id="buff-grid" class="buff-grid"></div>
     </section>
+
+    <!-- ── TRENNLINIE ──────────────────────────────────────── -->
+    <div class="tr-divider">Time Runs</div>
+
+    <!-- ── TR TERMINE ──────────────────────────────────────── -->
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">⏱&nbsp; TR Termine</h2>
+        <span class="section-badge">Mehrfachauswahl</span>
+      </div>
+      <div id="tr-termin-grid"></div>
+    </section>
+
+    <!-- ── TR KLASSEN ──────────────────────────────────────── -->
+    <section class="section">
+      <div class="section-head">
+        <h2 class="section-title">🏹&nbsp; Klassen</h2>
+      </div>
+      <div class="class-groups">
+        <!-- Hauptklassen -->
+        <div>
+          <div class="class-group-label">
+            Hauptklassen
+            <span id="tr-prio-count" style="color:var(--text-muted);font-weight:500;margin-left:6px">0 / 2</span>
+          </div>
+          <div id="tr-prio-grid" class="class-grid"></div>
+        </div>
+        <!-- Füllklassen -->
+        <div>
+          <div class="class-group-label">
+            Füllklassen
+            <span id="tr-fill-count" style="color:var(--text-muted);font-weight:500;margin-left:6px">0 / 2</span>
+          </div>
+          <div id="tr-fill-grid" class="class-grid"></div>
+        </div>
+      </div>
+    </section>
+
 
   </main>
 </div>
@@ -543,7 +660,22 @@ const LS_KEY         = 'capitol_sheet_url';
    ============================================================ */
 let sheetId        = null;
 let sheetUrl       = null;
-let selectedTimes  = {};
+let selectedTimes  = {}; // Legacy-Alias – intern: lrGrid.times
+
+/* ── TR-State ── */
+const TR_CLASSES = [
+  { name:'Templar',      icon:'🛡️' },
+  { name:'Slayer',       icon:'⚔️'  },
+  { name:'Seraph',       icon:'✨'  },
+  { name:'Forcemaster',  icon:'👊'  },
+  { name:'Arcanist',     icon:'🔮'  },
+  { name:'Mentalist',    icon:'🧿'  },
+  { name:'Crackshooter', icon:'🎯'  },
+  { name:'Harlequin',    icon:'💩'  },
+];
+const TR_CLASS_NAMES = TR_CLASSES.map(c=>c.name);
+let trPriority = []; // max 2
+let trFill     = []; // max 2
 let selectedBuffs  = [];
 let buffSaving     = false;
 
@@ -637,160 +769,201 @@ async function scriptCall(params) {
    DATEN LADEN
    ============================================================ */
 async function loadUserData() {
-  const result = await scriptCall({ action: 'read', sheetId });
+  const [lrResult, trResult] = await Promise.all([
+    scriptCall({ action: 'read',   sheetId }),
+    scriptCall({ action: 'readTR', sheetId }).catch(() => null),
+  ]);
 
-  selectedTimes = {};
+  // LR Termin
+  lrGrid.times = {};
   DAYS.forEach((day, i) => {
-    const cell = result.termin?.[i] ?? '';
-    selectedTimes[day] = cell
-      ? cell.split(',').map(t => t.trim()).filter(t => TIMES.includes(t))
-      : [];
+    const cell = lrResult.termin?.[i] ?? '';
+    lrGrid.times[day] = cell ? cell.split(',').map(t=>t.trim()).filter(t=>TIMES.includes(t)) : [];
   });
 
-  selectedBuffs = (result.buff ?? [])
-    .map(b => (b ?? '').trim())
-    .filter(b => BUFF_NAMES.includes(b));
+  // LR Buffs
+  selectedBuffs = (lrResult.buff ?? []).map(b=>(b??'').trim()).filter(b=>BUFF_NAMES.includes(b));
+
+  // TR Termin
+  trGrid.times = {};
+  DAYS.forEach((day, i) => {
+    const cell = trResult?.times?.[i] ?? '';
+    trGrid.times[day] = cell ? cell.split(',').map(t=>t.trim()).filter(t=>TIMES.includes(t)) : [];
+  });
+
+  // TR Klassen
+  trPriority = (trResult?.priority ?? '').split(',').map(s=>s.trim()).filter(s=>TR_CLASS_NAMES.includes(s));
+  trFill     = (trResult?.fill     ?? '').split(',').map(s=>s.trim()).filter(s=>TR_CLASS_NAMES.includes(s));
 
   renderTermin();
   renderBuff();
+  renderTimeGrid(trGrid, 'tr-termin-grid', 'tr');
+  renderTRClasses();
 }
 
 /* ============================================================
-   TERMIN
+   GENERALISIERTES DRAG-SYSTEM (LR + TR)
    ============================================================ */
+const makeDrag = () => ({ active:false, mode:'select', startDay:-1, startTime:-1, curDay:-1, curTime:-1 });
+const rangeOf  = d => ({
+  minD: Math.min(d.startDay, d.curDay),   maxD: Math.max(d.startDay, d.curDay),
+  minT: Math.min(d.startTime,d.curTime),  maxT: Math.max(d.startTime,d.curTime),
+});
 
-/* ── Drag-State ── */
-let drag = {
-  active:     false,
-  mode:       'select',   // 'select' | 'deselect'
-  startDay:   -1,
-  startTime:  -1,
-  curDay:     -1,
-  curTime:    -1,
-};
+const lrGrid = { times: {}, drag: makeDrag() };
+const trGrid = { times: {}, drag: makeDrag() };
+let   activeGrid = null;
 
-function getDragRange() {
-  return {
-    minD: Math.min(drag.startDay,  drag.curDay),
-    maxD: Math.max(drag.startDay,  drag.curDay),
-    minT: Math.min(drag.startTime, drag.curTime),
-    maxT: Math.max(drag.startTime, drag.curTime),
-  };
-}
+// ── Hold-Delay für Touch-Geräte ──────────────────────────────────────
+const HOLD_MS   = 300;
+let holdTimer   = null;
+let holdPending = null; // { gKey, dIdx, tIdx, x, y }
 
-function inDragRange(dIdx, tIdx) {
-  if (!drag.active) return false;
-  const { minD, maxD, minT, maxT } = getDragRange();
-  return dIdx >= minD && dIdx <= maxD && tIdx >= minT && tIdx <= maxT;
-}
-
-function renderTermin() {
-  document.getElementById('termin-grid').innerHTML =
+function renderTimeGrid(grid, containerId, gKey) {
+  const d = grid.drag;
+  const { minD, maxD, minT, maxT } = d.active ? rangeOf(d) : {};
+  document.getElementById(containerId).innerHTML =
     DAYS.map((day, dIdx) => {
-      const active = selectedTimes[day] ?? [];
+      const active = grid.times[day] ?? [];
       return `<div class="day-row">
         <div class="day-label">${DAY_SHORT[dIdx]}</div>
         <div class="time-slots">
           ${TIMES.map((t, tIdx) => {
-            const isActive  = active.includes(t);
-            const inRange   = inDragRange(dIdx, tIdx);
-            // Vorschau-Klasse: was passiert wenn Drag endet?
-            let preview = '';
-            if (inRange) {
-              preview = drag.mode === 'select' && !isActive ? ' drag-select'
-                      : drag.mode === 'deselect' && isActive ? ' drag-deselect'
-                      : '';
-            }
-            return `<button
-              class="time-btn${isActive ? ' active' : ''}${preview}"
-              data-d="${dIdx}" data-t="${tIdx}"
-              onpointerdown="onTimePtrDown(event,${dIdx},${tIdx})"
-            >${t}</button>`;
+            const on = active.includes(t);
+            const inR = d.active && dIdx>=minD && dIdx<=maxD && tIdx>=minT && tIdx<=maxT;
+            let cls = on ? ' active' : '';
+            if (inR) cls += d.mode==='select'&&!on ? ' drag-select' : d.mode==='deselect'&&on ? ' drag-deselect' : '';
+            return `<button class="time-btn${cls}" data-d="${dIdx}" data-t="${tIdx}" data-g="${gKey}"
+              onpointerdown="startDrag(event,'${gKey}',${dIdx},${tIdx})">${t}</button>`;
           }).join('')}
         </div>
       </div>`;
     }).join('');
 }
+function renderTermin() { renderTimeGrid(lrGrid, 'termin-grid', 'lr'); }
 
-/* ── Pointer-Handler ── */
-function onTimePtrDown(e, dIdx, tIdx) {
-  e.preventDefault();
+/* Einzel-Toggle (kurzer Tap) */
+function singleToggle(gKey, dIdx, tIdx) {
+  const grid = gKey === 'lr' ? lrGrid : trGrid;
+  const cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
+  const arr  = grid.times[DAYS[dIdx]] ??= [];
+  const idx  = arr.indexOf(TIMES[tIdx]);
+  if (idx === -1) arr.push(TIMES[tIdx]); else arr.splice(idx, 1);
+  renderTimeGrid(grid, cId, gKey);
+  if (gKey === 'lr') { clearTimeout(lrSaveTimer);       lrSaveTimer       = setTimeout(saveLRTermin, 300); }
+  else               { clearTimeout(trTimesSaveTimer);   trTimesSaveTimer  = setTimeout(saveTRTimes,  300); }
+}
 
-  const day  = DAYS[dIdx];
-  const time = TIMES[tIdx];
-  const isActive = (selectedTimes[day] ?? []).includes(time);
-
-  drag.active    = true;
-  drag.mode      = isActive ? 'deselect' : 'select';
-  drag.startDay  = dIdx;
-  drag.startTime = tIdx;
-  drag.curDay    = dIdx;
-  drag.curTime   = tIdx;
-
+/* Drag aktivieren (nach Hold oder sofort bei Maus) */
+function activateDrag(gKey, dIdx, tIdx) {
+  const grid = gKey === 'lr' ? lrGrid : trGrid;
+  const cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
+  const isOn = (grid.times[DAYS[dIdx]] ?? []).includes(TIMES[tIdx]);
+  grid.drag  = { active:true, mode: isOn?'deselect':'select',
+    startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
+  activeGrid = { grid, key:gKey, cId };
   document.body.classList.add('is-dragging');
-  renderTermin();
-
-  document.addEventListener('pointermove', onPtrMove, { passive: false });
-  document.addEventListener('pointerup',     onPtrUp);
-  document.addEventListener('pointercancel', onPtrUp);
+  renderTimeGrid(grid, cId, gKey);
+  document.addEventListener('pointermove', moveDrag, { passive: false });
+  document.addEventListener('pointerup',   endDrag);
+  document.addEventListener('pointercancel', endDrag);
 }
 
-function onPtrMove(e) {
-  if (!drag.active) return;
+/* Hold-Listener aufräumen */
+function clearHold() {
+  clearTimeout(holdTimer); holdTimer = null; holdPending = null;
+  window.removeEventListener('pointermove', onHoldMove);
+  window.removeEventListener('pointerup',   onHoldUp);
+  window.removeEventListener('pointercancel', onHoldCancel);
+}
+
+function onHoldMove(e) {
+  if (!holdPending) return;
+  if (Math.abs(e.clientX - holdPending.x) > 8 || Math.abs(e.clientY - holdPending.y) > 8) {
+    clearHold(); // User scrollt → kein Drag
+  }
+}
+function onHoldUp() {
+  if (!holdPending) return;
+  const { gKey, dIdx, tIdx } = holdPending;
+  clearHold();
+  singleToggle(gKey, dIdx, tIdx); // kurzer Tap
+}
+function onHoldCancel() { clearHold(); }
+
+function startDrag(e, gKey, dIdx, tIdx) {
+  if (e.pointerType === 'mouse') {
+    // Maus: sofort aktivieren
+    e.preventDefault();
+    activateDrag(gKey, dIdx, tIdx);
+    return;
+  }
+  // Touch: erst nach HOLD_MS aktivieren
+  holdPending = { gKey, dIdx, tIdx, x: e.clientX, y: e.clientY };
+  holdTimer   = setTimeout(() => {
+    if (!holdPending) return;
+    const { gKey, dIdx, tIdx } = holdPending;
+    holdPending = null;
+    if (navigator.vibrate) navigator.vibrate(20); // kurzes Haptic-Feedback
+    clearHold();
+    activateDrag(gKey, dIdx, tIdx);
+  }, HOLD_MS);
+  window.addEventListener('pointermove', onHoldMove, { passive: true });
+  window.addEventListener('pointerup',   onHoldUp,   { once: true });
+  window.addEventListener('pointercancel', onHoldCancel, { once: true });
+}
+
+function moveDrag(e) {
+  if (!activeGrid?.grid.drag.active) return;
   e.preventDefault();
-
-  // Element unter dem Finger / Mauszeiger ermitteln
-  const el  = document.elementFromPoint(e.clientX, e.clientY);
-  const btn = el?.closest('[data-d]');
-  if (!btn) return;
-
-  const dIdx = parseInt(btn.dataset.d);
-  const tIdx = parseInt(btn.dataset.t);
-  if (isNaN(dIdx) || isNaN(tIdx)) return;
-  if (dIdx === drag.curDay && tIdx === drag.curTime) return;
-
-  drag.curDay  = dIdx;
-  drag.curTime = tIdx;
-  renderTermin();
+  const btn = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-d]');
+  if (!btn || btn.dataset.g !== activeGrid.key) return;
+  const d = parseInt(btn.dataset.d), t = parseInt(btn.dataset.t);
+  if (isNaN(d)||isNaN(t)) return;
+  const dr = activeGrid.grid.drag;
+  if (d===dr.curDay && t===dr.curTime) return;
+  dr.curDay=d; dr.curTime=t;
+  renderTimeGrid(activeGrid.grid, activeGrid.cId, activeGrid.key);
 }
 
-function onPtrUp() {
-  if (!drag.active) return;
-  drag.active = false;
-  document.body.classList.remove('is-dragging');
+let lrSaveTimer=null, trTimesSaveTimer=null;
 
-  // Selektion anwenden
-  const { minD, maxD, minT, maxT } = getDragRange();
-  for (let d = minD; d <= maxD; d++) {
-    const day = DAYS[d];
-    if (!selectedTimes[day]) selectedTimes[day] = [];
-    const arr = selectedTimes[day];
-    for (let t = minT; t <= maxT; t++) {
-      const time = TIMES[t];
-      const idx  = arr.indexOf(time);
-      if (drag.mode === 'select'   && idx === -1) arr.push(time);
-      if (drag.mode === 'deselect' && idx !== -1) arr.splice(idx, 1);
+function endDrag() {
+  if (!activeGrid?.grid.drag.active) return;
+  const { grid, key, cId } = activeGrid;
+  grid.drag.active = false;
+  document.body.classList.remove('is-dragging');
+  const { minD, maxD, minT, maxT } = rangeOf(grid.drag);
+  for (let d=minD; d<=maxD; d++) {
+    const day=DAYS[d]; if (!grid.times[day]) grid.times[day]=[];
+    const arr=grid.times[day];
+    for (let t=minT; t<=maxT; t++) {
+      const time=TIMES[t], idx=arr.indexOf(time);
+      if (grid.drag.mode==='select'   && idx===-1) arr.push(time);
+      if (grid.drag.mode==='deselect' && idx!==-1) arr.splice(idx,1);
     }
   }
-
-  renderTermin();
-
-  document.removeEventListener('pointermove', onPtrMove);
-  document.removeEventListener('pointerup',   onPtrUp);
-  document.removeEventListener('pointercancel', onPtrUp);
-
-  // Speichern (mit kurzem Debounce für schnelle Mehrfach-Drags)
-  clearTimeout(terminSaveTimer);
-  terminSaveTimer = setTimeout(saveTermin, 300);
+  activeGrid = null;
+  renderTimeGrid(grid, cId, key);
+  document.removeEventListener('pointermove', moveDrag);
+  document.removeEventListener('pointerup',   endDrag);
+  document.removeEventListener('pointercancel', endDrag);
+  if (key==='lr') { clearTimeout(lrSaveTimer);      lrSaveTimer      = setTimeout(saveLRTermin, 300); }
+  else            { clearTimeout(trTimesSaveTimer);  trTimesSaveTimer = setTimeout(saveTRTimes,  300); }
 }
 
-let terminSaveTimer = null;
+function saveLRTermin() {
+  const values = DAYS.map(d => (lrGrid.times[d]??[]).join(','));
+  scriptCall({ action:'writeTermin', sheetId, data:JSON.stringify(values) })
+    .then(()=>showToast('Gespeichert ✓','success'))
+    .catch(e=>showToast('Fehler: '+e.message,'error'));
+}
 
-function saveTermin() {
-  const values = DAYS.map(d => (selectedTimes[d] ?? []).join(','));
-  scriptCall({ action: 'writeTermin', sheetId, data: JSON.stringify(values) })
-    .then(()  => showToast('Gespeichert ✓', 'success'))
-    .catch(e  => showToast('Fehler: ' + e.message, 'error'));
+function saveTRTimes() {
+  const values = DAYS.map(d => (trGrid.times[d]??[]).join(','));
+  scriptCall({ action:'writeTRTimes', sheetId, data:JSON.stringify(values) })
+    .then(()=>showToast('Gespeichert ✓','success'))
+    .catch(e=>showToast('Fehler: '+e.message,'error'));
 }
 
 /* ============================================================
@@ -874,13 +1047,82 @@ async function toggleBuff(name) {
 
 
 /* ============================================================
+   TR KLASSEN
+   ============================================================ */
+function renderTRClasses() {
+  document.getElementById('tr-prio-count').textContent = `${trPriority.length} / 2`;
+  document.getElementById('tr-fill-count').textContent = `${trFill.length} / 2`;
+
+  const priGrid  = document.getElementById('tr-prio-grid');
+  const fillGrid = document.getElementById('tr-fill-grid');
+
+  priGrid.innerHTML = TR_CLASSES.map(({ name, icon }) => {
+    const pos     = trPriority.indexOf(name);
+    const isPrio  = pos !== -1;
+    const isFill  = trFill.includes(name);
+    const full    = trPriority.length >= 2 && !isPrio;
+    return `<button
+      class="class-btn${isPrio?' prio':''}${isFill?' taken':''}"
+      onclick="toggleTRPrio('${name}')"
+      ${full||isFill ? 'disabled' : ''}
+    >
+      ${isPrio ? `<span class="class-prio-badge">${pos+1}</span>` : ''}
+      <span class="class-icon">${icon}</span>
+      <span class="class-name">${name}</span>
+    </button>`;
+  }).join('');
+
+  fillGrid.innerHTML = TR_CLASSES.map(({ name, icon }) => {
+    const isFill  = trFill.includes(name);
+    const isPrio  = trPriority.includes(name);
+    const full    = trFill.length >= 2 && !isFill;
+    return `<button
+      class="class-btn${isFill?' fill':''}${isPrio?' taken':''}"
+      onclick="toggleTRFill('${name}')"
+      ${full||isPrio ? 'disabled' : ''}
+    >
+      <span class="class-icon">${icon}</span>
+      <span class="class-name">${name}</span>
+    </button>`;
+  }).join('');
+}
+
+async function toggleTRPrio(name) {
+  const idx = trPriority.indexOf(name);
+  if (idx !== -1) trPriority.splice(idx,1);
+  else if (trPriority.length < 2) trPriority.push(name);
+  renderTRClasses();
+  await saveTRClasses();
+}
+
+async function toggleTRFill(name) {
+  const idx = trFill.indexOf(name);
+  if (idx !== -1) trFill.splice(idx,1);
+  else if (trFill.length < 2 && !trPriority.includes(name)) trFill.push(name);
+  renderTRClasses();
+  await saveTRClasses();
+}
+
+async function saveTRClasses() {
+  try {
+    await scriptCall({ action:'writeTRClasses', sheetId,
+      data: JSON.stringify({ priority: trPriority.join(','), fill: trFill.join(',') }) });
+    showToast('Gespeichert ✓','success');
+  } catch(e) {
+    showToast('Fehler: '+e.message,'error');
+  }
+}
+
+/* ============================================================
    LOGOUT
    ============================================================ */
 function logout() {
   localStorage.removeItem(LS_KEY);
   sheetId = null; sheetUrl = null;
-  selectedTimes = {}; selectedBuffs = [];
-  buffSaving = false;
+  lrGrid.times = {}; lrGrid.drag = makeDrag();
+  trGrid.times = {}; trGrid.drag = makeDrag();
+  selectedBuffs = []; buffSaving = false;
+  trPriority = []; trFill = [];
   document.getElementById('sheet-url-input').value = '';
   hideInlineError();
   showView('view-login');
