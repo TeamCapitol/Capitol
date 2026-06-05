@@ -289,8 +289,7 @@
       cursor: crosshair;
       transition: background .1s, border-color .1s, color .1s, box-shadow .1s;
       user-select: none; -webkit-user-select: none;
-      /* touch-action:none gibt JS volle Kontrolle – Scroll via Tag-Label möglich */
-      touch-action: none;
+      touch-action: manipulation;
       -webkit-touch-callout: none;
     }
     .time-btn:hover { border-color: var(--border-2); color: var(--text-dim); }
@@ -648,7 +647,7 @@
    KONFIGURATION
    ============================================================ */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5TzZo1zNBSJBaNtiLUeiv2k19Q2Y9dpXetEyWu0nzSRCo9pzDt7zZ77RxCyr0RSXU/exec';
-const VERSION = 'v1.9';
+const VERSION = 'v2.0';
 
 /* ============================================================
    KONSTANTEN
@@ -860,16 +859,48 @@ function renderTimeGrid(grid, containerId, gKey) {
 function renderTermin() { renderTimeGrid(lrGrid, 'termin-grid', 'lr'); }
 
 
-/* ── Drag-System ────────────────────────────────────────────────────
-   touch-action:none auf .time-btn → Browser hat keine Scroll-Priorität.
-   Quick Tap (<HOLD_MS) = einzelne Zelle; Halten + Ziehen = Bereich.
-   Scrollen: Tag-Labels oder andere Bereiche außerhalb der Buttons nutzen.
-   ──────────────────────────────────────────────────────────────────── */
+/* ── Drag-System ─────────────────────────────────────────────────
+   touch-action:manipulation → Scroll möglich beim schnellen Wischen.
+   Drag startet erst nach HOLD_MS Halten ohne Bewegung.
+   - Schnelles Wischen      → Scroll (Browser übernimmt)
+   - Hold <300ms loslassen  → einzelne Zelle toggle
+   - Hold >=300ms + Ziehen  → Mehrfachauswahl
+   ───────────────────────────────────────────────────────────────── */
 const HOLD_MS = 300;
 let holdTimer   = null;
-let holdPending = null; // { gKey, dIdx, tIdx }
+let holdPending = null;
 
-/* Einzelne Zelle umschalten */
+function preventScrollFn(e) { e.preventDefault(); }
+
+function clearHoldListeners() {
+  window.removeEventListener('pointermove',     onHoldMove);
+  document.removeEventListener('pointerup',     onHoldUp);
+  document.removeEventListener('pointercancel', onHoldCancel);
+}
+
+function onHoldMove(e) {
+  if (!holdPending) return;
+  if (Math.abs(e.clientX - holdPending.x) > 10 || Math.abs(e.clientY - holdPending.y) > 10) {
+    clearTimeout(holdTimer); holdTimer = null;
+    holdPending = null;
+    clearHoldListeners();
+  }
+}
+
+function onHoldUp() {
+  if (!holdPending) return;
+  clearTimeout(holdTimer); holdTimer = null;
+  const p = holdPending; holdPending = null;
+  clearHoldListeners();
+  singleToggle(p.gKey, p.dIdx, p.tIdx);
+}
+
+function onHoldCancel() {
+  clearTimeout(holdTimer); holdTimer = null;
+  holdPending = null;
+  clearHoldListeners();
+}
+
 function singleToggle(gKey, dIdx, tIdx) {
   const grid = gKey === 'lr' ? lrGrid : trGrid;
   const cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
@@ -878,92 +909,79 @@ function singleToggle(gKey, dIdx, tIdx) {
   if (idx === -1) arr.push(TIMES[tIdx]); else arr.splice(idx, 1);
   renderTimeGrid(grid, cId, gKey);
   if (gKey === 'lr') { clearTimeout(lrSaveTimer);      lrSaveTimer      = setTimeout(saveLRTermin, 300); }
-  else               { clearTimeout(trTimesSaveTimer);   trTimesSaveTimer  = setTimeout(saveTRTimes,  300); }
+  else               { clearTimeout(trTimesSaveTimer);  trTimesSaveTimer = setTimeout(saveTRTimes,  300); }
 }
 
-/* Drag-Modus starten */
 function activateDrag(gKey, dIdx, tIdx) {
   const grid = gKey === 'lr' ? lrGrid : trGrid;
   const cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
   const isOn = (grid.times[DAYS[dIdx]] ?? []).includes(TIMES[tIdx]);
-  grid.drag  = { active:true, mode: isOn?'deselect':'select',
+  grid.drag  = { active:true, mode: isOn ? 'deselect' : 'select',
     startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
   activeGrid = { grid, key:gKey, cId };
   document.body.classList.add('is-dragging');
-  document.addEventListener('pointermove', moveDrag);
-  document.addEventListener('pointerup',   endDrag);
+  document.addEventListener('touchmove',    preventScrollFn, { passive: false });
+  document.addEventListener('pointermove',  moveDrag);
+  document.addEventListener('pointerup',    endDrag);
   document.addEventListener('pointercancel', endDrag);
 }
 
-/* Pointer-Down auf einem Zeitbutton */
 function startDrag(e, gKey, dIdx, tIdx) {
-  e.preventDefault(); // Verhindert Scroll/Zoom (touch-action:none unterstützt das)
-
   if (e.pointerType === 'mouse') {
+    e.preventDefault();
     activateDrag(gKey, dIdx, tIdx);
     return;
   }
-
-  // Touch: Hold-Timer – nach HOLD_MS → Drag, davor → Tap
-  holdPending = { gKey, dIdx, tIdx };
-  document.addEventListener('pointerup',     onHoldUp,     { once: true });
-  document.addEventListener('pointercancel', onHoldCancel, { once: true });
-  holdTimer = setTimeout(() => {
+  holdPending = { gKey, dIdx, tIdx, x: e.clientX, y: e.clientY };
+  window.addEventListener('pointermove',    onHoldMove, { passive: true });
+  document.addEventListener('pointerup',    onHoldUp);
+  document.addEventListener('pointercancel', onHoldCancel);
+  holdTimer = setTimeout(function() {
     if (!holdPending) return;
-    const p = holdPending; holdPending = null;
-    document.removeEventListener('pointerup',     onHoldUp);
-    document.removeEventListener('pointercancel', onHoldCancel);
+    var p = holdPending; holdPending = null;
+    clearHoldListeners();
     if (navigator.vibrate) navigator.vibrate(20);
     activateDrag(p.gKey, p.dIdx, p.tIdx);
   }, HOLD_MS);
 }
 
-function onHoldUp() {
-  if (!holdPending) return;
-  clearTimeout(holdTimer); holdTimer = null;
-  const p = holdPending; holdPending = null;
-  singleToggle(p.gKey, p.dIdx, p.tIdx);
-}
-function onHoldCancel() {
-  clearTimeout(holdTimer); holdTimer = null; holdPending = null;
-}
-
-/* Drag-Bewegung */
 function moveDrag(e) {
-  if (!activeGrid?.grid.drag.active) return;
-  const btn = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-d]');
+  if (!activeGrid || !activeGrid.grid.drag.active) return;
+  var btn = document.elementFromPoint(e.clientX, e.clientY);
+  if (btn) btn = btn.closest('[data-d]');
   if (!btn || btn.dataset.g !== activeGrid.key) return;
-  const d = parseInt(btn.dataset.d), t = parseInt(btn.dataset.t);
-  if (isNaN(d)||isNaN(t)) return;
-  const dr = activeGrid.grid.drag;
+  var d = parseInt(btn.dataset.d), t = parseInt(btn.dataset.t);
+  if (isNaN(d) || isNaN(t)) return;
+  var dr = activeGrid.grid.drag;
   if (d === dr.curDay && t === dr.curTime) return;
   dr.curDay = d; dr.curTime = t;
   renderTimeGrid(activeGrid.grid, activeGrid.cId, activeGrid.key);
 }
 
-/* Drag-Ende */
 function endDrag() {
-  document.removeEventListener('pointermove', moveDrag);
-  document.removeEventListener('pointerup',   endDrag);
+  document.removeEventListener('touchmove',    preventScrollFn);
+  document.removeEventListener('pointermove',  moveDrag);
+  document.removeEventListener('pointerup',    endDrag);
   document.removeEventListener('pointercancel', endDrag);
-  if (!activeGrid?.grid.drag.active) return;
-  const { grid, key, cId } = activeGrid;
+  if (!activeGrid || !activeGrid.grid.drag.active) return;
+  var grid = activeGrid.grid, key = activeGrid.key, cId = activeGrid.cId;
   grid.drag.active = false;
   document.body.classList.remove('is-dragging');
-  const { minD, maxD, minT, maxT } = rangeOf(grid.drag);
-  for (let d=minD; d<=maxD; d++) {
-    const day=DAYS[d]; if (!grid.times[day]) grid.times[day]=[];
-    const arr=grid.times[day];
-    for (let t=minT; t<=maxT; t++) {
-      const time=TIMES[t], idx=arr.indexOf(time);
-      if (grid.drag.mode==='select'   && idx===-1) arr.push(time);
-      if (grid.drag.mode==='deselect' && idx!==-1) arr.splice(idx,1);
+  var r = rangeOf(grid.drag);
+  for (var d = r.minD; d <= r.maxD; d++) {
+    var day = DAYS[d];
+    if (!grid.times[day]) grid.times[day] = [];
+    var arr = grid.times[day];
+    for (var t = r.minT; t <= r.maxT; t++) {
+      var time = TIMES[t], idx = arr.indexOf(time);
+      if (grid.drag.mode === 'select'   && idx === -1) arr.push(time);
+      if (grid.drag.mode === 'deselect' && idx !== -1) arr.splice(idx, 1);
     }
   }
   activeGrid = null;
   renderTimeGrid(grid, cId, key);
-  if (key==='lr') { clearTimeout(lrSaveTimer);      lrSaveTimer      = setTimeout(saveLRTermin, 300); }
-  else             { clearTimeout(trTimesSaveTimer);  trTimesSaveTimer = setTimeout(saveTRTimes,  300); }
+  if (key === 'lr') { clearTimeout(lrSaveTimer);     lrSaveTimer     = setTimeout(saveLRTermin, 300); }
+  else              { clearTimeout(trTimesSaveTimer); trTimesSaveTimer = setTimeout(saveTRTimes,  300); }
 }
 
 let lrSaveTimer=null, trTimesSaveTimer=null;
