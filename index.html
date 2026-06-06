@@ -213,13 +213,16 @@
     /* ── APP VIEW ──────────────────────────────────────────── */
     #view-app { flex-direction: column; min-height: 100dvh; }
 
+    /* ── APP HEADER (inkl. Tab-Bar) ────────────────────────── */
     .app-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 13px 20px;
       background: rgba(9,15,28,.88);
       border-bottom: 1px solid var(--border);
       position: sticky; top: 0; z-index: 100;
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    }
+    .header-top {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 13px 20px;
     }
     .header-guild {
       font-size: 10px; font-weight: 700;
@@ -233,11 +236,93 @@
       letter-spacing: .06em; margin-top: 1px;
     }
 
+    /* ── TAB BAR ───────────────────────────────────────────── */
+    .tab-bar {
+      display: flex; gap: 0;
+      justify-content: center;
+      padding: 0 8px;
+      border-top: 1px solid var(--border);
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      display: flex; align-items: center; gap: 7px;
+      padding: 10px 16px 8px;
+      background: transparent; border: none;
+      border-bottom: 2px solid transparent;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 14px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: var(--text-dim); cursor: pointer;
+      transition: color .2s, border-color .2s;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-btn.confirmed {
+      color: var(--success);
+    }
+    .tab-btn.confirmed.active {
+      border-bottom-color: var(--success);
+    }
+
+    /* Grüner Punkt wenn bestätigt */
+    .tab-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--success); flex-shrink: 0;
+      opacity: 0; transform: scale(0);
+      transition: opacity .25s, transform .3s cubic-bezier(.34,1.56,.64,1);
+    }
+    .tab-btn.confirmed .tab-dot {
+      opacity: 1; transform: scale(1);
+    }
+
+    /* ── TAB PANELS ────────────────────────────────────────── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── APP MAIN (innerhalb der Panels) ───────────────────── */
     .app-main {
-      padding: 20px 16px 48px;
+      padding: 20px 16px 100px;   /* extra Platz für den Confirm-Button */
       max-width: 700px; margin: 0 auto; width: 100%;
       display: flex; flex-direction: column; gap: 20px;
     }
+
+    /* ── CONFIRM BAR (fixed unten) ─────────────────────────── */
+    .confirm-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 95;
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+      background: rgba(6,8,16,.93);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    }
+    .btn-confirm {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; width: 100%; max-width: 700px; margin: 0 auto;
+      padding: 14px 16px; border: none; border-radius: var(--r);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 16px; font-weight: 700;
+      letter-spacing: .07em; text-transform: uppercase;
+      cursor: pointer; user-select: none; -webkit-user-select: none;
+      transition: all .2s;
+      background: var(--accent); color: #000;
+    }
+    .btn-confirm:hover:not(:disabled) {
+      box-shadow: 0 0 28px var(--accent-glow); opacity: .95;
+    }
+    .btn-confirm:active:not(:disabled) { transform: scale(.97); }
+    .btn-confirm.done {
+      background: rgba(74,222,128,.1);
+      border: 1px solid rgba(74,222,128,.3);
+      color: var(--success);
+      cursor: default;
+    }
+    .btn-confirm:disabled { cursor: default; }
 
     /* ── SECTIONS ──────────────────────────────────────────── */
     .section {
@@ -271,7 +356,6 @@
       letter-spacing: .08em; text-transform: uppercase;
       color: var(--text-dim); text-align: center; line-height: 1;
     }
-    /* Grid mit 6 fixen Spalten – 22:50 bleibt immer in der Reihe */
     .time-slots {
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -291,7 +375,6 @@
       user-select: none; -webkit-user-select: none;
       touch-action: manipulation;
       -webkit-touch-callout: none;
-      -webkit-touch-callout: none;
     }
     .time-btn:hover { border-color: var(--border-2); color: var(--text-dim); }
     .time-btn.active {
@@ -300,18 +383,15 @@
       box-shadow: 0 0 10px var(--accent-glow), inset 0 0 12px rgba(77,158,255,.06);
     }
     .time-btn:active { transform: scale(.92); }
-    /* Drag-Vorschau: wird ausgewählt */
     .time-btn.drag-select {
       background: rgba(77,158,255,.25); border-color: var(--accent);
       color: var(--accent); font-weight: 700;
       box-shadow: 0 0 8px var(--accent-glow);
     }
-    /* Drag-Vorschau: wird abgewählt */
     .time-btn.drag-deselect {
       background: rgba(248,113,113,.13); border-color: rgba(248,113,113,.6);
       color: var(--error);
     }
-    /* Kein Scale-Zucken während Drag */
     body.is-dragging .time-btn:active { transform: none; }
 
     /* ── BUFF ──────────────────────────────────────────────── */
@@ -326,7 +406,6 @@
       background: var(--text-muted); border: 1px solid var(--border-2);
       transition: background .25s, box-shadow .25s;
     }
-    /* Slot-Punkte: Gold / Silber / Bronze */
     #bslot-0.filled { background: #d4960a; border-color: #ffe566; box-shadow: 0 0 8px rgba(212,150,10,.6); }
     #bslot-1.filled { background: #909090; border-color: #d8d8d8; box-shadow: 0 0 8px rgba(160,160,160,.5); }
     #bslot-2.filled { background: #8c4b15; border-color: #e8974a; box-shadow: 0 0 8px rgba(140,75,21,.6); }
@@ -350,7 +429,6 @@
     .buff-btn:hover:not([disabled]):not(.saving) {
       border-color: var(--border-2); background: var(--surface-2);
     }
-    /* Aktive Buff-Buttons: Farbe je nach Rang */
     .buff-btn.rank-1 {
       background: rgba(212,150,10,.12); border-color: #d4960a;
       box-shadow: 0 0 16px rgba(212,150,10,.35);
@@ -379,7 +457,6 @@
     .buff-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
     .buff-name { font-size: 14px; font-weight: 600; letter-spacing: .02em; color: var(--text); flex: 1; }
 
-    /* Rang-Label unter dem Icon (1. / 2. / 3. Priorität) */
     .buff-rank-label {
       position: absolute; bottom: 6px; right: 8px;
       font-size: 10px; font-weight: 700; letter-spacing: .06em;
@@ -389,39 +466,20 @@
     .rank-2 .buff-rank-label { color: #d8d8d8; }
     .rank-3 .buff-rank-label { color: #e8974a; }
 
-    /* Gold */
     .rank-badge.r1 {
       background: linear-gradient(135deg, #ffe566 0%, #d4960a 100%);
-      color: #4a2e00;
-      box-shadow: 0 2px 12px rgba(212,150,10,.6);
+      color: #4a2e00; box-shadow: 0 2px 12px rgba(212,150,10,.6);
     }
-    /* Silber */
     .rank-badge.r2 {
       background: linear-gradient(135deg, #f0f0f0 0%, #909090 100%);
-      color: #2a2a2a;
-      box-shadow: 0 2px 12px rgba(144,144,144,.5);
+      color: #2a2a2a; box-shadow: 0 2px 12px rgba(144,144,144,.5);
     }
-    /* Bronze */
     .rank-badge.r3 {
       background: linear-gradient(135deg, #e8974a 0%, #6e3210 100%);
-      color: #fff;
-      box-shadow: 0 2px 12px rgba(140,75,21,.6);
+      color: #fff; box-shadow: 0 2px 12px rgba(140,75,21,.6);
     }
-
 
     /* ── TIME RUNS ─────────────────────────────────────────── */
-    .tr-divider {
-      display: flex; align-items: center; gap: 14px;
-      padding: 6px 0; color: var(--text-muted);
-      font-size: 11px; font-weight: 700; letter-spacing: .18em;
-      text-transform: uppercase;
-    }
-    .tr-divider::before, .tr-divider::after {
-      content: ''; flex: 1; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border), transparent);
-    }
-
-    /* Klassen-Auswahl Wrapper */
     .class-groups {
       padding: 14px; display: flex; flex-direction: column; gap: 14px;
     }
@@ -448,22 +506,18 @@
     .class-btn:active:not([disabled]) { transform: scale(.96); }
     .class-btn[disabled] { opacity: .28; cursor: not-allowed; }
 
-    /* Hauptklasse – blau */
     .class-btn.prio {
       background: var(--accent-dim); border-color: var(--accent);
       box-shadow: 0 0 12px var(--accent-glow);
     }
-    /* Füllklasse – gedämpftes Blau */
     .class-btn.fill {
       background: rgba(77,158,255,.07); border-color: rgba(77,158,255,.4);
     }
-    /* Schon in der anderen Gruppe */
     .class-btn.taken { opacity: .3; cursor: not-allowed; pointer-events: none; }
 
     .class-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
     .class-name { font-size: 13px; font-weight: 600; color: var(--text); }
 
-    /* Prio-Badge (1 / 2) */
     .class-prio-badge {
       position: absolute; top: -6px; right: -6px;
       width: 18px; height: 18px; border-radius: 50%;
@@ -473,15 +527,56 @@
       border: 2px solid var(--surface);
     }
 
-    @media (max-width: 480px) {
-      .class-grid { grid-template-columns: repeat(2, 1fr); }
-      .class-btn { padding: 10px 10px; gap: 7px; }
-      .class-name { font-size: 12px; }
+    /* ── RAID ──────────────────────────────────────────────── */
+    .raid-intro {
+      padding: 14px 20px; font-size: 14px; font-weight: 500;
+      color: var(--text-dim); border-bottom: 1px solid var(--border);
+      line-height: 1.6;
     }
+    .raid-char-select {
+      padding: 20px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .raid-select-label {
+      font-size: 11px; font-weight: 700; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--text-dim);
+    }
+    .raid-char-btns {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    .raid-char-btn {
+      padding: 22px 10px 18px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--r);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 28px; font-weight: 700; color: var(--text-dim);
+      cursor: pointer; width: 100%;
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      transition: all .15s; user-select: none; -webkit-user-select: none;
+    }
+    .raid-char-btn:hover { border-color: var(--border-2); color: var(--text); }
+    .raid-char-btn:active { transform: scale(.95); }
+    .raid-char-btn.active {
+      background: var(--accent-dim); border-color: var(--accent);
+      color: var(--accent); box-shadow: 0 0 18px var(--accent-glow);
+    }
+    .raid-char-sub {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase; opacity: .7;
+    }
+    .raid-opt-out {
+      display: none; margin: 0 20px 20px; padding: 10px;
+      background: transparent; border: 1px solid var(--border);
+      border-radius: var(--r);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px; font-weight: 600; letter-spacing: .05em;
+      color: var(--text-muted); cursor: pointer;
+      transition: all .15s; width: calc(100% - 40px);
+    }
+    .raid-opt-out:hover { border-color: var(--error); color: var(--error); }
 
     /* ── TOAST ─────────────────────────────────────────────── */
     .toast {
-      position: fixed; bottom: 28px; left: 50%;
+      position: fixed; bottom: 90px; left: 50%;   /* über dem Confirm-Bar */
       transform: translateX(-50%) translateY(14px);
       background: var(--surface-2); border: 1px solid var(--border-2);
       border-radius: 100px; padding: 11px 24px;
@@ -500,16 +595,18 @@
     @media (max-width: 480px) {
       .auth-card { padding: 34px 20px 24px; }
       .auth-title { font-size: 30px; }
-      .app-main { padding: 14px 10px 40px; gap: 14px; }
+      .app-main { padding: 14px 10px 100px; gap: 14px; }
       .day-row { padding: 10px 12px; gap: 6px; }
       .day-label { width: 24px; font-size: 10px; }
-      /* Grid übernimmt Größenanpassung – kein min-width nötig */
       .time-btn { font-size: 10px; height: 34px; }
       .time-slots { gap: 4px; }
       .buff-grid { grid-template-columns: repeat(2, 1fr); padding: 10px; gap: 8px; }
       .buff-btn { padding: 12px 10px; gap: 8px; }
       .buff-name { font-size: 13px; }
       .buff-icon { font-size: 18px; }
+      .class-grid { grid-template-columns: repeat(2, 1fr); }
+      .class-btn { padding: 10px 10px; gap: 7px; }
+      .class-name { font-size: 12px; }
     }
     @media (max-width: 360px) {
       .time-btn { font-size: 9px; height: 32px; }
@@ -564,80 +661,139 @@
 
 <!-- ── APP ───────────────────────────────────────────────── -->
 <div id="view-app" class="view">
+
+  <!-- Header + Tab-Bar (gemeinsam sticky) -->
   <header class="app-header">
-    <div>
-      <div class="header-logo"><span>Capitol</span></div>
-      <div id="header-version" class="header-version"></div>
+    <div class="header-top">
+      <div>
+        <div class="header-logo"><span>Capitol</span></div>
+        <div id="header-version" class="header-version"></div>
+      </div>
+      <button class="btn-logout" onclick="logout()">Abmelden</button>
     </div>
-    <button class="btn-logout" onclick="logout()">Abmelden</button>
+    <!-- Tab-Buttons werden per JS gerendert -->
+    <nav class="tab-bar" id="tab-bar"></nav>
   </header>
 
-  <main class="app-main">
+  <!-- ── LR-Panel (Lucifers Realm + Buffs) ──────────────── -->
+  <div id="tab-panel-lr" class="tab-panel active">
+    <div class="app-main">
 
-    <section class="section">
-      <div class="section-head">
-        <h2 class="section-title">🗓&nbsp; LR Termine</h2>
-        <span class="section-badge">Mehrfachauswahl</span>
-      </div>
-      <div id="termin-grid"></div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <h2 class="section-title">⚡&nbsp; Buffs</h2>
-        <span id="buff-count-badge" class="section-badge">0 / 3 gewählt</span>
-      </div>
-      <div class="buff-info-bar">
-        <div class="buff-slots">
-          <div class="buff-slot" id="bslot-0"></div>
-          <div class="buff-slot" id="bslot-1"></div>
-          <div class="buff-slot" id="bslot-2"></div>
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">🗓&nbsp; LR Termine</h2>
+          <span class="section-badge">Mehrfachauswahl</span>
         </div>
-        <span id="buff-status-text">Wähle 3 Buffs in Prioritätsreihenfolge</span>
-      </div>
-      <div id="buff-grid" class="buff-grid"></div>
-    </section>
+        <div id="termin-grid"></div>
+      </section>
 
-    <!-- ── TRENNLINIE ──────────────────────────────────────── -->
-    <div class="tr-divider">Time Runs</div>
-
-    <!-- ── TR TERMINE ──────────────────────────────────────── -->
-    <section class="section">
-      <div class="section-head">
-        <h2 class="section-title">⏱&nbsp; TR Termine</h2>
-        <span class="section-badge">Mehrfachauswahl</span>
-      </div>
-      <div id="tr-termin-grid"></div>
-    </section>
-
-    <!-- ── TR KLASSEN ──────────────────────────────────────── -->
-    <section class="section">
-      <div class="section-head">
-        <h2 class="section-title">🏹&nbsp; Klassen</h2>
-      </div>
-      <div class="class-groups">
-        <!-- Hauptklassen -->
-        <div>
-          <div class="class-group-label">
-            Hauptklassen
-            <span id="tr-prio-count" style="color:var(--text-muted);font-weight:500;margin-left:6px">0 / 2</span>
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">⚡&nbsp; Buffs</h2>
+          <span id="buff-count-badge" class="section-badge">0 / 3 gewählt</span>
+        </div>
+        <div class="buff-info-bar">
+          <div class="buff-slots">
+            <div class="buff-slot" id="bslot-0"></div>
+            <div class="buff-slot" id="bslot-1"></div>
+            <div class="buff-slot" id="bslot-2"></div>
           </div>
-          <div id="tr-prio-grid" class="class-grid"></div>
+          <span id="buff-status-text">Wähle 3 Buffs in Prioritätsreihenfolge</span>
         </div>
-        <!-- Füllklassen -->
-        <div>
-          <div class="class-group-label">
-            Füllklassen
-            <span id="tr-fill-count" style="color:var(--text-muted);font-weight:500;margin-left:6px">0 / 2</span>
+        <div id="buff-grid" class="buff-grid"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ── TR-Panel (Time Runs) ───────────────────────────── -->
+  <div id="tab-panel-tr" class="tab-panel">
+    <div class="app-main">
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">⏱&nbsp; TR Termine</h2>
+          <span class="section-badge">Mehrfachauswahl</span>
+        </div>
+        <div id="tr-termin-grid"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">🏹&nbsp; Klassen</h2>
+        </div>
+        <div class="class-groups">
+          <div>
+            <div class="class-group-label">
+              Hauptklassen
+              <span id="tr-prio-count" style="color:var(--text-muted);font-weight:500;margin-left:6px">0 / 2</span>
+            </div>
+            <div id="tr-prio-grid" class="class-grid"></div>
           </div>
-          <div id="tr-fill-grid" class="class-grid"></div>
+          <div>
+            <div class="class-group-label">
+              Füllklassen
+              <span id="tr-fill-count" style="color:var(--text-muted);font-weight:500;margin-left:6px">0 / 2</span>
+            </div>
+            <div id="tr-fill-grid" class="class-grid"></div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
+    </div>
+  </div>
 
-  </main>
-</div>
+  <!-- ── Raid-Panel ────────────────────────────────────────── -->
+  <div id="tab-panel-raid" class="tab-panel">
+    <div class="app-main">
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">🗓&nbsp; Raid Termine</h2>
+          <span class="section-badge">Mehrfachauswahl</span>
+        </div>
+        <div id="raid-termin-grid"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">🏰&nbsp; Raid</h2>
+          <span class="section-badge">12 Chars benötigt</span>
+        </div>
+        <div class="raid-intro">
+          Wähle wie viele Chars du spielen möchtest. Sobald 12 Chars zusammenkommen,
+          wird die Aufstellung im Discord gepostet und ihr besprecht wer was spielt.
+        </div>
+        <div class="raid-char-select">
+          <div class="raid-select-label">Deine Char-Anzahl</div>
+          <div class="raid-char-btns">
+            <button class="raid-char-btn" id="raid-btn-1" onclick="selectRaidChars(1)">
+              1<span class="raid-char-sub">Char</span>
+            </button>
+            <button class="raid-char-btn" id="raid-btn-2" onclick="selectRaidChars(2)">
+              2<span class="raid-char-sub">Chars</span>
+            </button>
+            <button class="raid-char-btn" id="raid-btn-3" onclick="selectRaidChars(3)">
+              3<span class="raid-char-sub">Chars</span>
+            </button>
+          </div>
+        </div>
+        <button class="raid-opt-out" id="raid-opt-out" onclick="selectRaidChars(0)">
+          Abmelden / Nicht teilnehmen
+        </button>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ── Confirm-Bar (fixed unten, pro Tab) ─────────────── -->
+  <div class="confirm-bar">
+    <button class="btn-confirm" id="confirm-btn" onclick="confirmCurrentTab()">
+      Abstimmung bestätigen
+    </button>
+  </div>
+
+</div><!-- /#view-app -->
 
 <div id="toast" class="toast"></div>
 
@@ -647,8 +803,8 @@
 /* ============================================================
    KONFIGURATION
    ============================================================ */
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztNafNenJg_gMpdhIZdmYZeoKqW9hCFB3mhrPihRT_bcDbbPZJVmYJkqDqLJDfNmf_/exec';
-const VERSION = 'v1.0.1';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_bDi3jy7t01XTz2obOQqgjPc_R_blEQ6TMWOeXW2kBcCOvD4Stpl5fIYZOjHAta08ng/exec';
+const VERSION = 'v1.0.0';
 
 /* ============================================================
    KONSTANTEN
@@ -665,15 +821,26 @@ const BUFFS = [
   { name: 'Quest',      icon: '📜'  },
   { name: 'Smuggler',   icon: '🗝️'  },
 ];
-const BUFF_NAMES     = BUFFS.map(b => b.name);
-const LS_KEY         = 'capitol_sheet_url';
+const BUFF_NAMES = BUFFS.map(b => b.name);
+const LS_KEY     = 'capitol_sheet_url';
+
+/* ── Tab-Konfiguration (einfach erweiterbar) ── */
+const TABS = [
+  { id: 'lr',   label: 'LR',   icon: '⚔️' },
+  { id: 'tr',   label: 'TR',   icon: '⏱'  },
+  { id: 'raid', label: 'Raid', icon: '🏰'  },
+  // Zukünftig: { id: 'gw', label: 'GW', icon: '🛡️' },
+];
 
 /* ============================================================
    STATE
    ============================================================ */
-let sheetId        = null;
-let sheetUrl       = null;
-let selectedTimes  = {}; // Legacy-Alias – intern: lrGrid.times
+let sheetId  = null;
+let sheetUrl = null;
+
+let activeTab    = 'lr';
+let tabConfirmed = {};        // z.B. { lr: false, tr: false, raid: false }
+let raidChars    = 0;         // 0 = nicht angemeldet, 1–3 = Anzahl Chars
 
 /* ── TR-State ── */
 const TR_CLASSES = [
@@ -687,8 +854,8 @@ const TR_CLASSES = [
   { name:'Harlequin',    icon:'💩'  },
 ];
 const TR_CLASS_NAMES = TR_CLASSES.map(c=>c.name);
-let trPriority = []; // max 2
-let trFill     = []; // max 2
+let trPriority = [];
+let trFill     = [];
 let selectedBuffs  = [];
 let buffSaving     = false;
 
@@ -711,7 +878,6 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('sheet-url-input')
     ?.addEventListener('keydown', e => { if (e.key === 'Enter') handleLoginSubmit(); });
 
-  // Kontext-Menü auf Zeitbuttons verhindern (stört Hold-to-Drag auf Android)
   document.addEventListener('contextmenu', e => {
     if (e.target.closest('[data-d]') || holdPending || activeGrid?.grid.drag.active) {
       e.preventDefault();
@@ -729,6 +895,83 @@ function showView(id) {
 function setLoadingText(t) {
   const el = document.getElementById('loading-text');
   if (el) el.textContent = t;
+}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+function renderTabBar() {
+  const bar = document.getElementById('tab-bar');
+  if (!bar) return;
+  bar.innerHTML = TABS.map(({ id, label, icon }) => {
+    const confirmed = !!tabConfirmed[id];
+    return `<button
+      class="tab-btn${id === activeTab ? ' active' : ''}${confirmed ? ' confirmed' : ''}"
+      data-tab="${id}"
+      onclick="switchTab('${id}')"
+    >
+      <span>${icon}</span>
+      <span>${label}</span>
+      <span class="tab-dot"></span>
+    </button>`;
+  }).join('');
+}
+
+function switchTab(id) {
+  activeTab = id;
+  document.querySelectorAll('.tab-panel').forEach(p =>
+    p.classList.toggle('active', p.id === `tab-panel-${id}`)
+  );
+  renderTabBar();
+  renderConfirmBar();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+/* ============================================================
+   CONFIRM-BAR
+   ============================================================ */
+function renderConfirmBar() {
+  const btn = document.getElementById('confirm-btn');
+  if (!btn) return;
+
+  // Raid: Char-Auswahl IST die Bestätigung – kein separater Confirm-Button
+  if (activeTab === 'raid') {
+    btn.disabled = true;
+    if (raidChars > 0) {
+      btn.textContent = `✓  ${raidChars} Char${raidChars > 1 ? 's' : ''} angemeldet`;
+      btn.classList.add('done');
+    } else {
+      btn.textContent = 'Char-Anzahl oben auswählen';
+      btn.classList.remove('done');
+    }
+    return;
+  }
+
+  const confirmed = !!tabConfirmed[activeTab];
+  btn.disabled = confirmed;
+  btn.classList.toggle('done', confirmed);
+  btn.textContent = confirmed ? '✓  Bereits abgestimmt' : 'Abstimmung bestätigen';
+}
+
+async function confirmCurrentTab() {
+  const type = activeTab;
+  const btn  = document.getElementById('confirm-btn');
+  if (!btn || btn.disabled) return;
+
+  btn.disabled    = true;
+  btn.textContent = 'Wird gespeichert…';
+
+  try {
+    await scriptCall({ action: 'setConfirmed', sheetId, data: JSON.stringify({ type }) });
+    tabConfirmed[type] = true;
+    showToast('Bestätigt ✓', 'success');
+    renderTabBar();
+    renderConfirmBar();
+  } catch (e) {
+    showToast('Fehler: ' + e.message, 'error');
+    btn.disabled = false;
+    renderConfirmBar();
+  }
 }
 
 /* ============================================================
@@ -766,6 +1009,7 @@ async function loadAndEnter() {
     localStorage.setItem(LS_KEY, sheetUrl);
     document.getElementById('header-version').textContent = VERSION;
     showView('view-app');
+    switchTab(activeTab);   // Tab-Bar + Panel korrekt initialisieren
   } catch (err) {
     const back = localStorage.getItem(LS_KEY) ? 'view-resume' : 'view-login';
     showView(back);
@@ -790,9 +1034,10 @@ async function scriptCall(params) {
    DATEN LADEN
    ============================================================ */
 async function loadUserData() {
-  const [lrResult, trResult] = await Promise.all([
-    scriptCall({ action: 'read',   sheetId }),
-    scriptCall({ action: 'readTR', sheetId }).catch(() => null),
+  const [lrResult, trResult, raidResult] = await Promise.all([
+    scriptCall({ action: 'read',     sheetId }),
+    scriptCall({ action: 'readTR',   sheetId }).catch(() => null),
+    scriptCall({ action: 'readRaid', sheetId }).catch(() => null),
   ]);
 
   // LR Termin
@@ -816,10 +1061,27 @@ async function loadUserData() {
   trPriority = (trResult?.priority ?? '').split(',').map(s=>s.trim()).filter(s=>TR_CLASS_NAMES.includes(s));
   trFill     = (trResult?.fill     ?? '').split(',').map(s=>s.trim()).filter(s=>TR_CLASS_NAMES.includes(s));
 
+  // Raid
+  raidGrid.times = {};
+  DAYS.forEach((day, i) => {
+    const cell = raidResult?.times?.[i] ?? '';
+    raidGrid.times[day] = cell ? cell.split(',').map(t=>t.trim()).filter(t=>TIMES.includes(t)) : [];
+  });
+  raidChars = raidResult?.chars ?? 0;
+  tabConfirmed = {
+    lr:   lrResult.lrConfirmed === true,
+    tr:   trResult?.trConfirmed === true,
+    raid: raidChars > 0,
+  };
+
   renderTermin();
   renderBuff();
   renderTimeGrid(trGrid, 'tr-termin-grid', 'tr');
   renderTRClasses();
+  renderRaidTermin();
+  renderRaid();
+  renderTabBar();
+  renderConfirmBar();
 }
 
 /* ============================================================
@@ -831,8 +1093,9 @@ const rangeOf  = d => ({
   minT: Math.min(d.startTime,d.curTime),  maxT: Math.max(d.startTime,d.curTime),
 });
 
-const lrGrid = { times: {}, drag: makeDrag() };
-const trGrid = { times: {}, drag: makeDrag() };
+const lrGrid   = { times: {}, drag: makeDrag() };
+const trGrid   = { times: {}, drag: makeDrag() };
+const raidGrid = { times: {}, drag: makeDrag() };
 let activeGrid = null;
 
 /* ── Time Grid Rendering ──────────────────────────────────── */
@@ -859,26 +1122,24 @@ function renderTimeGrid(grid, containerId, gKey) {
 }
 function renderTermin() { renderTimeGrid(lrGrid, 'termin-grid', 'lr'); }
 
-
-/* ── Drag-System ─────────────────────────────────────────────────
-   Maus  → Drag zum Mehrfachauswählen
-   Touch → Einzelner Tap schaltet eine Zelle um (kein Drag)
-   ───────────────────────────────────────────────────────────────── */
+/* ── Drag-System ─────────────────────────────────────────── */
+let holdPending = false;
 
 function singleToggle(gKey, dIdx, tIdx) {
-  var grid = gKey === 'lr' ? lrGrid : trGrid;
-  var cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
+  var grid = gKey === 'lr' ? lrGrid : gKey === 'tr' ? trGrid : raidGrid;
+  var cId  = gKey === 'lr' ? 'termin-grid' : gKey === 'tr' ? 'tr-termin-grid' : 'raid-termin-grid';
   var arr  = grid.times[DAYS[dIdx]] || (grid.times[DAYS[dIdx]] = []);
   var idx  = arr.indexOf(TIMES[tIdx]);
   if (idx === -1) arr.push(TIMES[tIdx]); else arr.splice(idx, 1);
   renderTimeGrid(grid, cId, gKey);
-  if (gKey === 'lr') { clearTimeout(lrSaveTimer);      lrSaveTimer      = setTimeout(saveLRTermin, 300); }
-  else               { clearTimeout(trTimesSaveTimer);  trTimesSaveTimer = setTimeout(saveTRTimes,  300); }
+  if (gKey === 'lr')   { clearTimeout(lrSaveTimer);       lrSaveTimer       = setTimeout(saveLRTermin,  300); }
+  else if (gKey === 'tr') { clearTimeout(trTimesSaveTimer); trTimesSaveTimer  = setTimeout(saveTRTimes,   300); }
+  else                 { clearTimeout(raidSaveTimer);      raidSaveTimer     = setTimeout(saveRaidTimes, 300); }
 }
 
 function activateDrag(gKey, dIdx, tIdx) {
-  var grid = gKey === 'lr' ? lrGrid : trGrid;
-  var cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
+  var grid = gKey === 'lr' ? lrGrid : gKey === 'tr' ? trGrid : raidGrid;
+  var cId  = gKey === 'lr' ? 'termin-grid' : gKey === 'tr' ? 'tr-termin-grid' : 'raid-termin-grid';
   var isOn = (grid.times[DAYS[dIdx]] || []).includes(TIMES[tIdx]);
   grid.drag  = { active:true, mode: isOn ? 'deselect' : 'select',
     startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
@@ -890,8 +1151,6 @@ function activateDrag(gKey, dIdx, tIdx) {
 }
 
 function startDrag(e, gKey, dIdx, tIdx) {
-
-  /* ── Touch: Toggle erst beim sauberen Tap (down→up ohne Bewegung) ── */
   if (e.pointerType !== 'mouse') {
     var x0 = e.clientX, y0 = e.clientY;
     function cleanupTouch() {
@@ -901,24 +1160,23 @@ function startDrag(e, gKey, dIdx, tIdx) {
     }
     function onTMove(ev) {
       if (Math.abs(ev.clientX - x0) > 8 || Math.abs(ev.clientY - y0) > 8)
-        cleanupTouch(); // Finger hat sich bewegt → Scroll, kein Toggle
+        cleanupTouch();
     }
     function onTUp()     { cleanupTouch(); singleToggle(gKey, dIdx, tIdx); }
-    function onTCancel() { cleanupTouch(); } // Browser scrollt
+    function onTCancel() { cleanupTouch(); }
     document.addEventListener('pointermove',   onTMove, { passive: true });
     document.addEventListener('pointerup',     onTUp);
     document.addEventListener('pointercancel', onTCancel);
     return;
   }
 
-  /* ── Maus: Klick = toggle | Gedrückt + Bewegen = Mehrfachauswahl ── */
   e.preventDefault();
   var x0 = e.clientX, y0 = e.clientY, moved = false;
   function onMove(ev) {
     if (!moved && (Math.abs(ev.clientX - x0) > 4 || Math.abs(ev.clientY - y0) > 4)) {
       moved = true;
-      var grid = gKey === 'lr' ? lrGrid : trGrid;
-      var cId  = gKey === 'lr' ? 'termin-grid' : 'tr-termin-grid';
+      var grid = gKey === 'lr' ? lrGrid : gKey === 'tr' ? trGrid : raidGrid;
+      var cId  = gKey === 'lr' ? 'termin-grid' : gKey === 'tr' ? 'tr-termin-grid' : 'raid-termin-grid';
       var isOn = (grid.times[DAYS[dIdx]] || []).includes(TIMES[tIdx]);
       grid.drag = { active:true, mode: isOn ? 'deselect' : 'select',
         startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
@@ -970,11 +1228,12 @@ function endDrag() {
   }
   activeGrid = null;
   renderTimeGrid(grid, cId, key);
-  if (key === 'lr') { clearTimeout(lrSaveTimer);     lrSaveTimer     = setTimeout(saveLRTermin, 300); }
-  else              { clearTimeout(trTimesSaveTimer); trTimesSaveTimer = setTimeout(saveTRTimes,  300); }
+  if (key === 'lr')   { clearTimeout(lrSaveTimer);       lrSaveTimer       = setTimeout(saveLRTermin,  300); }
+  else if (key === 'tr') { clearTimeout(trTimesSaveTimer); trTimesSaveTimer  = setTimeout(saveTRTimes,   300); }
+  else                { clearTimeout(raidSaveTimer);      raidSaveTimer     = setTimeout(saveRaidTimes, 300); }
 }
 
-let lrSaveTimer=null, trTimesSaveTimer=null;
+let lrSaveTimer=null, trTimesSaveTimer=null, raidSaveTimer=null;
 
 function saveLRTermin() {
   const values = DAYS.map(d => (lrGrid.times[d]??[]).join(','));
@@ -990,20 +1249,26 @@ function saveTRTimes() {
     .catch(e=>showToast('Fehler: '+e.message,'error'));
 }
 
+function saveRaidTimes() {
+  const values = DAYS.map(d => (raidGrid.times[d]??[]).join(','));
+  scriptCall({ action:'writeRaidTimes', sheetId, data:JSON.stringify(values) })
+    .then(()=>showToast('Gespeichert ✓','success'))
+    .catch(e=>showToast('Fehler: '+e.message,'error'));
+}
+
+function renderRaidTermin() { renderTimeGrid(raidGrid, 'raid-termin-grid', 'raid'); }
+
 /* ============================================================
    BUFF
    ============================================================ */
 function renderBuff() {
-  // Slot-Punkte
   for (let i = 0; i < 3; i++) {
     document.getElementById(`bslot-${i}`)?.classList.toggle('filled', i < selectedBuffs.length);
   }
 
-  // Zähler
   const badge = document.getElementById('buff-count-badge');
   if (badge) badge.textContent = `${selectedBuffs.length} / 3 gewählt`;
 
-  // Status-Text
   const statusEl = document.getElementById('buff-status-text');
   if (statusEl) {
     if (buffSaving) {
@@ -1017,7 +1282,6 @@ function renderBuff() {
   }
 
   const RANK_LABEL = ['1. Priorität', '2. Priorität', '3. Priorität'];
-
   const full = selectedBuffs.length >= 3;
   document.getElementById('buff-grid').innerHTML = BUFFS.map(({ name, icon }) => {
     const pos        = selectedBuffs.indexOf(name);
@@ -1046,7 +1310,6 @@ function toggleBuff(name) {
     selectedBuffs.push(name);
   }
   renderBuff();
-  // Sofort speichern, kein Warten – UI bleibt immer bedienbar
   scriptCall({
     action: 'writeBuff',
     sheetId,
@@ -1054,8 +1317,6 @@ function toggleBuff(name) {
   }).then(() => showToast('Gespeichert ✓', 'success'))
     .catch(e => showToast('Fehler: ' + e.message, 'error'));
 }
-
-
 
 /* ============================================================
    TR KLASSEN
@@ -1125,6 +1386,31 @@ async function saveTRClasses() {
 }
 
 /* ============================================================
+   RAID
+   ============================================================ */
+function renderRaid() {
+  [1, 2, 3].forEach(n => {
+    document.getElementById(`raid-btn-${n}`)?.classList.toggle('active', raidChars === n);
+  });
+  const optOut = document.getElementById('raid-opt-out');
+  if (optOut) optOut.style.display = raidChars > 0 ? 'block' : 'none';
+  tabConfirmed.raid = raidChars > 0;
+}
+
+async function selectRaidChars(n) {
+  raidChars = n;
+  renderRaid();
+  renderTabBar();
+  renderConfirmBar();
+  try {
+    await scriptCall({ action: 'writeRaid', sheetId, data: JSON.stringify({ chars: n }) });
+    showToast(n > 0 ? `${n} Char${n > 1 ? 's' : ''} angemeldet ✓` : 'Abgemeldet', 'success');
+  } catch(e) {
+    showToast('Fehler: ' + e.message, 'error');
+  }
+}
+
+/* ============================================================
    LOGOUT
    ============================================================ */
 function logout() {
@@ -1132,8 +1418,12 @@ function logout() {
   sheetId = null; sheetUrl = null;
   lrGrid.times = {}; lrGrid.drag = makeDrag();
   trGrid.times = {}; trGrid.drag = makeDrag();
+  raidGrid.times = {}; raidGrid.drag = makeDrag();
   selectedBuffs = []; buffSaving = false;
   trPriority = []; trFill = [];
+  raidChars = 0;
+  tabConfirmed = {};
+  activeTab = 'lr';
   document.getElementById('sheet-url-input').value = '';
   hideInlineError();
   showView('view-login');
@@ -1146,8 +1436,6 @@ function extractSheetId(url) {
   const m = (url ?? '').match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
   return m ? m[1] : null;
 }
-
-
 
 function showInlineError(msg) {
   const el = document.getElementById('login-error');
