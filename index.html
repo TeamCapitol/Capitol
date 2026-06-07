@@ -803,8 +803,8 @@
 /* ============================================================
    KONFIGURATION
    ============================================================ */
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_bDi3jy7t01XTz2obOQqgjPc_R_blEQ6TMWOeXW2kBcCOvD4Stpl5fIYZOjHAta08ng/exec';
-const VERSION = 'v1.0.0';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwKMIWdzSN3JBRb-HieZgHoPHVnCRCyppggekGavnnMfi5iysAzpX2--hL0v0FiOpMm4w/exec';
+const VERSION = 'v1.0.1';
 
 /* ============================================================
    KONSTANTEN
@@ -933,20 +933,6 @@ function switchTab(id) {
 function renderConfirmBar() {
   const btn = document.getElementById('confirm-btn');
   if (!btn) return;
-
-  // Raid: Char-Auswahl IST die Bestätigung – kein separater Confirm-Button
-  if (activeTab === 'raid') {
-    btn.disabled = true;
-    if (raidChars > 0) {
-      btn.textContent = `✓  ${raidChars} Char${raidChars > 1 ? 's' : ''} angemeldet`;
-      btn.classList.add('done');
-    } else {
-      btn.textContent = 'Char-Anzahl oben auswählen';
-      btn.classList.remove('done');
-    }
-    return;
-  }
-
   const confirmed = !!tabConfirmed[activeTab];
   btn.disabled = confirmed;
   btn.classList.toggle('done', confirmed);
@@ -1071,7 +1057,7 @@ async function loadUserData() {
   tabConfirmed = {
     lr:   lrResult.lrConfirmed === true,
     tr:   trResult?.trConfirmed === true,
-    raid: raidChars > 0,
+    raid: raidResult?.raidConfirmed === true,
   };
 
   renderTermin();
@@ -1394,7 +1380,7 @@ function renderRaid() {
   });
   const optOut = document.getElementById('raid-opt-out');
   if (optOut) optOut.style.display = raidChars > 0 ? 'block' : 'none';
-  tabConfirmed.raid = raidChars > 0;
+  // tabConfirmed.raid wird nur durch den Confirm-Button gesetzt, nicht durch Char-Auswahl
 }
 
 async function selectRaidChars(n) {
