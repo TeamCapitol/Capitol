@@ -358,7 +358,7 @@
     }
     .time-slots {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(9, 1fr);
       gap: 5px;
       flex: 1;
       min-width: 0;
@@ -598,7 +598,7 @@
       .app-main { padding: 14px 10px 100px; gap: 14px; }
       .day-row { padding: 10px 12px; gap: 6px; }
       .day-label { width: 24px; font-size: 10px; }
-      .time-btn { font-size: 10px; height: 34px; }
+      .time-btn { font-size: 9px; height: 34px; letter-spacing: -.3px; }
       .time-slots { gap: 4px; }
       .buff-grid { grid-template-columns: repeat(2, 1fr); padding: 10px; gap: 8px; }
       .buff-btn { padding: 12px 10px; gap: 8px; }
@@ -609,8 +609,8 @@
       .class-name { font-size: 12px; }
     }
     @media (max-width: 360px) {
-      .time-btn { font-size: 9px; height: 32px; }
-      .time-slots { gap: 3px; }
+      .time-btn { font-size: 8px; height: 32px; letter-spacing: -.4px; padding: 0; }
+      .time-slots { gap: 2px; }
       .day-label { width: 20px; font-size: 9px; }
       .day-row { padding: 8px 10px; gap: 5px; }
     }
@@ -767,18 +767,61 @@
         <div class="raid-char-select">
           <div class="raid-select-label">Deine Char-Anzahl</div>
           <div class="raid-char-btns">
-            <button class="raid-char-btn" id="raid-btn-1" onclick="selectRaidChars(1)">
+            <button class="raid-char-btn" id="raid-btn-1" onclick="selectEventChars('raid', 1)">
               1<span class="raid-char-sub">Char</span>
             </button>
-            <button class="raid-char-btn" id="raid-btn-2" onclick="selectRaidChars(2)">
+            <button class="raid-char-btn" id="raid-btn-2" onclick="selectEventChars('raid', 2)">
               2<span class="raid-char-sub">Chars</span>
             </button>
-            <button class="raid-char-btn" id="raid-btn-3" onclick="selectRaidChars(3)">
+            <button class="raid-char-btn" id="raid-btn-3" onclick="selectEventChars('raid', 3)">
               3<span class="raid-char-sub">Chars</span>
             </button>
           </div>
         </div>
-        <button class="raid-opt-out" id="raid-opt-out" onclick="selectRaidChars(0)">
+        <button class="raid-opt-out" id="raid-opt-out" onclick="selectEventChars('raid', 0)">
+          Abmelden / Nicht teilnehmen
+        </button>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ── Szenario-Panel ────────────────────────────────────────── -->
+  <div id="tab-panel-szenario" class="tab-panel">
+    <div class="app-main">
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">🗓&nbsp; Szenario Termine</h2>
+          <span class="section-badge">Mehrfachauswahl</span>
+        </div>
+        <div id="szenario-termin-grid"></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">🎭&nbsp; Szenario</h2>
+          <span class="section-badge">8 Chars benötigt</span>
+        </div>
+        <div class="raid-intro">
+          Wähle wie viele Chars du spielen möchtest. Sobald 8 Chars zusammenkommen,
+          wird die Aufstellung im Discord gepostet und ihr besprecht wer was spielt.
+        </div>
+        <div class="raid-char-select">
+          <div class="raid-select-label">Deine Char-Anzahl</div>
+          <div class="raid-char-btns">
+            <button class="raid-char-btn" id="szenario-btn-1" onclick="selectEventChars('szenario', 1)">
+              1<span class="raid-char-sub">Char</span>
+            </button>
+            <button class="raid-char-btn" id="szenario-btn-2" onclick="selectEventChars('szenario', 2)">
+              2<span class="raid-char-sub">Chars</span>
+            </button>
+            <button class="raid-char-btn" id="szenario-btn-3" onclick="selectEventChars('szenario', 3)">
+              3<span class="raid-char-sub">Chars</span>
+            </button>
+          </div>
+        </div>
+        <button class="raid-opt-out" id="szenario-opt-out" onclick="selectEventChars('szenario', 0)">
           Abmelden / Nicht teilnehmen
         </button>
       </section>
@@ -804,14 +847,14 @@
    KONFIGURATION
    ============================================================ */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJDf7NI3mdBzHMpnkpZXGPpSUNKK7xjPMGBQhvxaC6vFXV71V72iZTCZdM2yRVTxKnNA/exec';
-const VERSION = 'v1.0.2';
+const VERSION = 'v1.0.3';
 
 /* ============================================================
    KONSTANTEN
    ============================================================ */
 const DAYS      = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
 const DAY_SHORT = ['Mo','Di','Mi','Do','Fr','Sa','So'];
-const TIMES     = ['17:50','18:50','19:50','20:50','21:50','22:50'];
+const TIMES     = ['14:50','15:50','16:50','17:50','18:50','19:50','20:50','21:50','22:50'];
 const BUFFS = [
   { name: 'Survival',   icon: '🛡️' },
   { name: 'Recycling',  icon: '♻️'  },
@@ -829,6 +872,7 @@ const TABS = [
   { id: 'lr',   label: 'LR',   icon: '⚔️' },
   { id: 'tr',   label: 'TR',   icon: '⏱'  },
   { id: 'raid', label: 'Raid', icon: '🏰'  },
+  { id: 'szenario', label: 'Szenario', icon: '🎭' },
   // Zukünftig: { id: 'gw', label: 'GW', icon: '🛡️' },
 ];
 
@@ -839,8 +883,14 @@ let sheetId  = null;
 let sheetUrl = null;
 
 let activeTab    = 'lr';
-let tabConfirmed = {};        // z.B. { lr: false, tr: false, raid: false }
-let raidChars    = 0;         // 0 = nicht angemeldet, 1–3 = Anzahl Chars
+let tabConfirmed = {};        // z.B. { lr: false, tr: false, raid: false, szenario: false }
+let eventChars   = { raid: 0, szenario: 0 };   // 0 = nicht angemeldet, 1–3 = Anzahl Chars
+
+/* ── Raid / Szenario: Apps-Script-Aktionen ── */
+const EVENTS = {
+  raid:     { read: 'readRaid',     writeTimes: 'writeRaidTimes',     writeChars: 'writeRaid'     },
+  szenario: { read: 'readSzenario', writeTimes: 'writeSzenarioTimes', writeChars: 'writeSzenario' },
+};
 
 /* ── TR-State ── */
 const TR_CLASSES = [
@@ -1020,10 +1070,11 @@ async function scriptCall(params) {
    DATEN LADEN
    ============================================================ */
 async function loadUserData() {
-  const [lrResult, trResult, raidResult] = await Promise.all([
+  const [lrResult, trResult, raidResult, szResult] = await Promise.all([
     scriptCall({ action: 'read',     sheetId }),
     scriptCall({ action: 'readTR',   sheetId }).catch(() => null),
     scriptCall({ action: 'readRaid', sheetId }).catch(() => null),
+    scriptCall({ action: 'readSzenario', sheetId }).catch(() => null),
   ]);
 
   // LR Termin
@@ -1047,25 +1098,30 @@ async function loadUserData() {
   trPriority = (trResult?.priority ?? '').split(',').map(s=>s.trim()).filter(s=>TR_CLASS_NAMES.includes(s));
   trFill     = (trResult?.fill     ?? '').split(',').map(s=>s.trim()).filter(s=>TR_CLASS_NAMES.includes(s));
 
-  // Raid
-  raidGrid.times = {};
-  DAYS.forEach((day, i) => {
-    const cell = raidResult?.times?.[i] ?? '';
-    raidGrid.times[day] = cell ? cell.split(',').map(t=>t.trim()).filter(t=>TIMES.includes(t)) : [];
-  });
-  raidChars = raidResult?.chars ?? 0;
+  // Raid + Szenario
+  for (const [key, res] of [['raid', raidResult], ['szenario', szResult]]) {
+    GRIDS[key].grid.times = {};
+    DAYS.forEach((day, i) => {
+      const cell = res?.times?.[i] ?? '';
+      GRIDS[key].grid.times[day] = cell ? cell.split(',').map(t=>t.trim()).filter(t=>TIMES.includes(t)) : [];
+    });
+    eventChars[key] = res?.chars ?? 0;
+  }
   tabConfirmed = {
-    lr:   lrResult.lrConfirmed === true,
-    tr:   trResult?.trConfirmed === true,
-    raid: raidResult?.raidConfirmed === true,
+    lr:       lrResult.lrConfirmed === true,
+    tr:       trResult?.trConfirmed === true,
+    raid:     raidResult?.raidConfirmed === true,
+    szenario: szResult?.confirmed === true,
   };
 
   renderTermin();
   renderBuff();
   renderTimeGrid(trGrid, 'tr-termin-grid', 'tr');
   renderTRClasses();
-  renderRaidTermin();
-  renderRaid();
+  renderTimeGrid(raidGrid, 'raid-termin-grid', 'raid');
+  renderTimeGrid(szenarioGrid, 'szenario-termin-grid', 'szenario');
+  renderEventChars('raid');
+  renderEventChars('szenario');
   renderTabBar();
   renderConfirmBar();
 }
@@ -1082,6 +1138,13 @@ const rangeOf  = d => ({
 const lrGrid   = { times: {}, drag: makeDrag() };
 const trGrid   = { times: {}, drag: makeDrag() };
 const raidGrid = { times: {}, drag: makeDrag() };
+const szenarioGrid = { times: {}, drag: makeDrag() };
+const GRIDS = {
+  lr:       { grid: lrGrid,       cId: 'termin-grid',          save: saveLRTermin },
+  tr:       { grid: trGrid,       cId: 'tr-termin-grid',       save: saveTRTimes },
+  raid:     { grid: raidGrid,     cId: 'raid-termin-grid',     save: () => saveEventTimes('raid') },
+  szenario: { grid: szenarioGrid, cId: 'szenario-termin-grid', save: () => saveEventTimes('szenario') },
+};
 let activeGrid = null;
 
 /* ── Time Grid Rendering ──────────────────────────────────── */
@@ -1112,20 +1175,18 @@ function renderTermin() { renderTimeGrid(lrGrid, 'termin-grid', 'lr'); }
 let holdPending = false;
 
 function singleToggle(gKey, dIdx, tIdx) {
-  var grid = gKey === 'lr' ? lrGrid : gKey === 'tr' ? trGrid : raidGrid;
-  var cId  = gKey === 'lr' ? 'termin-grid' : gKey === 'tr' ? 'tr-termin-grid' : 'raid-termin-grid';
+  var grid = GRIDS[gKey].grid;
+  var cId  = GRIDS[gKey].cId;
   var arr  = grid.times[DAYS[dIdx]] || (grid.times[DAYS[dIdx]] = []);
   var idx  = arr.indexOf(TIMES[tIdx]);
   if (idx === -1) arr.push(TIMES[tIdx]); else arr.splice(idx, 1);
   renderTimeGrid(grid, cId, gKey);
-  if (gKey === 'lr')   { clearTimeout(lrSaveTimer);       lrSaveTimer       = setTimeout(saveLRTermin,  300); }
-  else if (gKey === 'tr') { clearTimeout(trTimesSaveTimer); trTimesSaveTimer  = setTimeout(saveTRTimes,   300); }
-  else                 { clearTimeout(raidSaveTimer);      raidSaveTimer     = setTimeout(saveRaidTimes, 300); }
+  scheduleSave(gKey);
 }
 
 function activateDrag(gKey, dIdx, tIdx) {
-  var grid = gKey === 'lr' ? lrGrid : gKey === 'tr' ? trGrid : raidGrid;
-  var cId  = gKey === 'lr' ? 'termin-grid' : gKey === 'tr' ? 'tr-termin-grid' : 'raid-termin-grid';
+  var grid = GRIDS[gKey].grid;
+  var cId  = GRIDS[gKey].cId;
   var isOn = (grid.times[DAYS[dIdx]] || []).includes(TIMES[tIdx]);
   grid.drag  = { active:true, mode: isOn ? 'deselect' : 'select',
     startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
@@ -1161,8 +1222,8 @@ function startDrag(e, gKey, dIdx, tIdx) {
   function onMove(ev) {
     if (!moved && (Math.abs(ev.clientX - x0) > 4 || Math.abs(ev.clientY - y0) > 4)) {
       moved = true;
-      var grid = gKey === 'lr' ? lrGrid : gKey === 'tr' ? trGrid : raidGrid;
-      var cId  = gKey === 'lr' ? 'termin-grid' : gKey === 'tr' ? 'tr-termin-grid' : 'raid-termin-grid';
+      var grid = GRIDS[gKey].grid;
+      var cId  = GRIDS[gKey].cId;
       var isOn = (grid.times[DAYS[dIdx]] || []).includes(TIMES[tIdx]);
       grid.drag = { active:true, mode: isOn ? 'deselect' : 'select',
         startDay:dIdx, startTime:tIdx, curDay:dIdx, curTime:tIdx };
@@ -1214,12 +1275,14 @@ function endDrag() {
   }
   activeGrid = null;
   renderTimeGrid(grid, cId, key);
-  if (key === 'lr')   { clearTimeout(lrSaveTimer);       lrSaveTimer       = setTimeout(saveLRTermin,  300); }
-  else if (key === 'tr') { clearTimeout(trTimesSaveTimer); trTimesSaveTimer  = setTimeout(saveTRTimes,   300); }
-  else                { clearTimeout(raidSaveTimer);      raidSaveTimer     = setTimeout(saveRaidTimes, 300); }
+  scheduleSave(key);
 }
 
-let lrSaveTimer=null, trTimesSaveTimer=null, raidSaveTimer=null;
+const saveTimers = {};
+function scheduleSave(key) {
+  clearTimeout(saveTimers[key]);
+  saveTimers[key] = setTimeout(GRIDS[key].save, 300);
+}
 
 function saveLRTermin() {
   const values = DAYS.map(d => (lrGrid.times[d]??[]).join(','));
@@ -1235,14 +1298,13 @@ function saveTRTimes() {
     .catch(e=>showToast('Fehler: '+e.message,'error'));
 }
 
-function saveRaidTimes() {
-  const values = DAYS.map(d => (raidGrid.times[d]??[]).join(','));
-  scriptCall({ action:'writeRaidTimes', sheetId, data:JSON.stringify(values) })
+function saveEventTimes(key) {
+  const values = DAYS.map(d => (GRIDS[key].grid.times[d]??[]).join(','));
+  scriptCall({ action:EVENTS[key].writeTimes, sheetId, data:JSON.stringify(values) })
     .then(()=>showToast('Gespeichert ✓','success'))
     .catch(e=>showToast('Fehler: '+e.message,'error'));
 }
 
-function renderRaidTermin() { renderTimeGrid(raidGrid, 'raid-termin-grid', 'raid'); }
 
 /* ============================================================
    BUFF
@@ -1372,24 +1434,25 @@ async function saveTRClasses() {
 }
 
 /* ============================================================
-   RAID
+   RAID / SZENARIO
    ============================================================ */
-function renderRaid() {
+function renderEventChars(key) {
+  const chars = eventChars[key];
   [1, 2, 3].forEach(n => {
-    document.getElementById(`raid-btn-${n}`)?.classList.toggle('active', raidChars === n);
+    document.getElementById(`${key}-btn-${n}`)?.classList.toggle('active', chars === n);
   });
-  const optOut = document.getElementById('raid-opt-out');
-  if (optOut) optOut.style.display = raidChars > 0 ? 'block' : 'none';
-  // tabConfirmed.raid wird nur durch den Confirm-Button gesetzt, nicht durch Char-Auswahl
+  const optOut = document.getElementById(`${key}-opt-out`);
+  if (optOut) optOut.style.display = chars > 0 ? 'block' : 'none';
+  // tabConfirmed wird nur durch den Confirm-Button gesetzt, nicht durch Char-Auswahl
 }
 
-async function selectRaidChars(n) {
-  raidChars = n;
-  renderRaid();
+async function selectEventChars(key, n) {
+  eventChars[key] = n;
+  renderEventChars(key);
   renderTabBar();
   renderConfirmBar();
   try {
-    await scriptCall({ action: 'writeRaid', sheetId, data: JSON.stringify({ chars: n }) });
+    await scriptCall({ action: EVENTS[key].writeChars, sheetId, data: JSON.stringify({ chars: n }) });
     showToast(n > 0 ? `${n} Char${n > 1 ? 's' : ''} angemeldet ✓` : 'Abgemeldet', 'success');
   } catch(e) {
     showToast('Fehler: ' + e.message, 'error');
@@ -1405,9 +1468,10 @@ function logout() {
   lrGrid.times = {}; lrGrid.drag = makeDrag();
   trGrid.times = {}; trGrid.drag = makeDrag();
   raidGrid.times = {}; raidGrid.drag = makeDrag();
+  szenarioGrid.times = {}; szenarioGrid.drag = makeDrag();
   selectedBuffs = []; buffSaving = false;
   trPriority = []; trFill = [];
-  raidChars = 0;
+  eventChars = { raid: 0, szenario: 0 };
   tabConfirmed = {};
   activeTab = 'lr';
   document.getElementById('sheet-url-input').value = '';
